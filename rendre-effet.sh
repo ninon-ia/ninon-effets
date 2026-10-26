@@ -54,16 +54,17 @@ BESOINS="$(lire besoins)"
 [ -n "$DUREE" ] || DUREE="$(lire duree)"
 python3 -I -c "import sys; d=float(sys.argv[1]); sys.exit(0 if 2 <= d <= 8 else 1)" "$DUREE" || { echo "--duree doit être entre 2 et 8 s" >&2; exit 1; }
 
-# HyperFrames : $HYPERFRAMES_BIN, sinon le binaire le plus récent du cache npx, sinon npx.
+# HyperFrames : $HYPERFRAMES_BIN, sinon la version testée (HF_VERSION) déjà en cache npx, sinon npx l'installe.
+HF_VERSION="0.8.204"
 hf() {
   if [ -n "${HYPERFRAMES_BIN:-}" ]; then "$HYPERFRAMES_BIN" "$@"; return; fi
-  local best="" bestv="0"
   for b in "$HOME"/.npm/_npx/*/node_modules/.bin/hyperframes; do
     [ -x "$b" ] || continue
-    local v; v="$(node -p "require('$(dirname "$(dirname "$b")")/hyperframes/package.json').version" 2>/dev/null || echo 0)"
-    if [ "$(printf '%s\n%s\n' "$bestv" "$v" | sort -V | tail -1)" = "$v" ]; then best="$b"; bestv="$v"; fi
+    if [ "$(node -p "require('$(dirname "$(dirname "$b")")/hyperframes/package.json').version" 2>/dev/null)" = "$HF_VERSION" ]; then
+      "$b" "$@"; return
+    fi
   done
-  if [ -n "$best" ]; then "$best" "$@"; else npx --yes hyperframes "$@"; fi
+  npx --yes "hyperframes@$HF_VERSION" "$@"
 }
 
 # Le clip doit couvrir l'extrait demandé.
@@ -148,7 +149,8 @@ fi
 
 # 6. Durée : toutes les valeurs data-duration="2.5" de la copie.
 if [ "$DUREE" != "2.5" ]; then
-  find "$SORTIE" -name '*.html' -not -path '*/.hyperframes/*' -exec sed -i '' "s/data-duration=\"2\.5\"/data-duration=\"$DUREE\"/g" {} +
+  find "$SORTIE" -name '*.html' -not -path '*/.hyperframes/*' -exec sed -i.bak "s/data-duration=\"2\.5\"/data-duration=\"$DUREE\"/g" {} +
+  find "$SORTIE" -name '*.html.bak' -delete
 fi
 
 # 7. Textes et rendu.

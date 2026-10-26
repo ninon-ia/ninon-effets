@@ -17,7 +17,12 @@ Chaque effet dure de 2 à 8 s, en 1080×1920, et tous les textes se changent.
 
 ## Installer
 
-1. Il te faut [Claude Code](https://claude.com/claude-code), `ffmpeg` et Node.js 18 ou plus. Sur Mac : `brew install ffmpeg node`.
+1. Il te faut :
+   - [Claude Code](https://claude.com/claude-code), l'application ou le terminal (pas claude.ai dans le navigateur : il faut un accès à tes fichiers) ;
+   - `ffmpeg`, Node.js 18 ou plus et `python3`. Sur Mac : `brew install ffmpeg node python` ;
+   - Mac ou Linux. Sous Windows, passe par WSL.
+
+   Au premier effet, HyperFrames et le modèle de détourage se téléchargent tout seuls : compte environ 2 minutes et une connexion internet.
 2. Copie le skill dans ton dossier de skills :
 
 ```bash
