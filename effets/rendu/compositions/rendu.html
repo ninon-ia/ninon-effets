@@ -1,0 +1,545 @@
+<!--
+  Effet rendu · scène « rendu » : la fenêtre « ninon.ia — rendu » (4 pistes, tête de lecture), puis la barre
+  de rendu depart % → 100 % entre 0,2 s et DUREE − 0,2 s, la ligne de specs, et « prêt ✓ » à 100 %.
+  Textes : variables de index.html, reçues par data-variable-values sur l'hôte.
+  Racine transparente : le fond et la carte du visage sont dans index.html.
+-->
+<template>
+  <style>
+    @font-face {
+      font-family: "Inter Display";
+      src: url("assets/fonts/InterDisplay-latin.woff2") format("woff2");
+      font-weight: 100 900;
+      font-display: block;
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: "Inter Display";
+      src: url("assets/fonts/InterDisplay-latin-ext.woff2") format("woff2");
+      font-weight: 100 900;
+      font-display: block;
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      --accent: #c2410c;
+      --accent-texte: #e8622a;
+      --accent-clair: #f0a37c;
+      --carte: #2c2c2f;
+      --bord: #3a3a3e;
+      --gris: #8b8a90;
+      --creme: #ece4d8;
+      --sans: "Inter Display", "Inter", sans-serif;
+      --mono: "JetBrains Mono", monospace;
+      --serif: "EB Garamond", serif;
+      font-family: var(--sans);
+      color: #ffffff;
+    }
+
+    /* ---------- Fenêtre ---------- */
+    #rd-fenetre {
+      position: absolute;
+      left: 70px;
+      top: 222px;
+      width: 940px;
+      height: 530px;
+      border-radius: 28px;
+      background: var(--carte);
+      border: 1.5px solid var(--bord);
+      box-shadow: 0 34px 90px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+    #rd-barre {
+      position: relative;
+      height: 60px;
+      border-bottom: 1.5px solid var(--bord);
+      background: #29292c;
+    }
+    .rd-pastille {
+      position: absolute;
+      top: 23px;
+      width: 14px;
+      height: 14px;
+      border-radius: 7px;
+      background: #4a4a4f;
+    }
+    #rd-titre {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 60px;
+      line-height: 60px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    #rd-titre .marque {
+      font-family: var(--serif);
+      font-size: 28px;
+      font-weight: 500;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: #e4e2e8;
+    }
+    #rd-titre .rest {
+      font-size: 29px;
+      font-weight: 600;
+      color: #b9b8be;
+    }
+    #rd-corps {
+      position: absolute;
+      left: 26px;
+      right: 26px;
+      top: 78px;
+      bottom: 18px;
+    }
+    #rd-regle {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 40px;
+    }
+    #rd-tc {
+      position: absolute;
+      left: 0;
+      top: 2px;
+      font-family: var(--mono);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--accent-clair);
+      white-space: nowrap;
+    }
+    #rd-graduations {
+      position: absolute;
+      left: 170px;
+      top: 6px;
+      width: 718px;
+      height: 30px;
+    }
+    .rd-piste {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 88px;
+    }
+    .rd-nom {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 160px;
+      height: 88px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 30px;
+      font-weight: 600;
+      color: #e4e2e8;
+      white-space: nowrap;
+    }
+    .rd-nom i {
+      width: 12px;
+      height: 12px;
+      border-radius: 6px;
+      flex: none;
+    }
+    .rd-voie {
+      position: absolute;
+      left: 170px;
+      top: 0;
+      width: 718px;
+      height: 88px;
+      border-radius: 12px;
+      background: #232225;
+    }
+    .rd-bloc {
+      position: absolute;
+      top: 12px;
+      height: 64px;
+      border-radius: 10px;
+      transform-origin: 0 50%;
+    }
+    .b-video {
+      background-color: #4a4a4f;
+      background-size: 64px 64px;
+      background-repeat: repeat-x;
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.14);
+    }
+    .b-brique {
+      background: var(--accent);
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.16);
+    }
+    .b-titre {
+      background: var(--creme);
+    }
+    .b-titre::before {
+      content: "";
+      position: absolute;
+      left: 12px;
+      right: 30%;
+      top: 22px;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(33, 32, 35, 0.45);
+    }
+    .b-titre::after {
+      content: "";
+      position: absolute;
+      left: 12px;
+      right: 52%;
+      top: 36px;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(33, 32, 35, 0.25);
+    }
+    .b-musique {
+      background: #3d2417;
+      box-shadow: inset 0 0 0 2px rgba(240, 163, 124, 0.25);
+      overflow: hidden;
+    }
+    #rd-onde {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 64px;
+    }
+    #rd-onde rect {
+      fill: var(--accent-clair);
+    }
+    /* Ce qui n'est pas encore rendu reste grisé, à droite de la tête de lecture. */
+    #rd-reste {
+      position: absolute;
+      left: 170px;
+      top: 52px;
+      width: 718px;
+      height: 376px;
+      background: rgba(44, 44, 47, 0.62);
+      transform-origin: 100% 50%;
+    }
+    #rd-tete {
+      position: absolute;
+      left: 170px;
+      top: 0;
+      width: 2px;
+      height: 428px;
+    }
+    #rd-tete .ligne {
+      position: absolute;
+      left: -1.5px;
+      top: 26px;
+      width: 3px;
+      bottom: 0;
+      background: var(--accent-texte);
+      box-shadow: 0 0 14px rgba(232, 98, 42, 0.6);
+    }
+    #rd-tete .poignee {
+      position: absolute;
+      left: -11px;
+      top: 4px;
+      width: 22px;
+      height: 26px;
+      border-radius: 6px 6px 11px 11px;
+      background: var(--accent-texte);
+    }
+
+    /* ---------- Progression ---------- */
+    #rd-progres {
+      position: absolute;
+      left: 70px;
+      top: 790px;
+      width: 940px;
+    }
+    #rd-haut {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      height: 96px;
+    }
+    #rd-quoi {
+      padding-bottom: 12px;
+      white-space: nowrap;
+    }
+    #rd-quoi .t {
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    #rd-quoi .f {
+      margin-left: 14px;
+      font-family: var(--mono);
+      font-size: 28px;
+      color: #a3a2a8;
+    }
+    #rd-pct {
+      font-size: 96px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 96px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    #rd-pct .sym {
+      font-size: 60px;
+      font-weight: 700;
+      margin-left: 6px;
+      color: #a3a2a8;
+    }
+    #rd-rail {
+      position: relative;
+      margin-top: 12px;
+      height: 14px;
+      border-radius: 7px;
+      background: #3a393e;
+      overflow: hidden;
+    }
+    #rd-rempli {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 7px;
+      background: var(--accent);
+      transform-origin: 0 50%;
+    }
+    #rd-reflet {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 160px;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 220, 200, 0.55) 50%, rgba(255, 255, 255, 0) 100%);
+      opacity: 0;
+    }
+    #rd-bas {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+      height: 44px;
+    }
+    #rd-format {
+      font-family: var(--mono);
+      font-size: 28px;
+      font-weight: 500;
+      color: #c9c8ce;
+      white-space: nowrap;
+    }
+    #rd-droite {
+      position: relative;
+      width: 300px;
+      height: 44px;
+    }
+    #rd-images {
+      position: absolute;
+      right: 0;
+      top: 6px;
+      font-family: var(--mono);
+      font-size: 28px;
+      color: #a3a2a8;
+      white-space: nowrap;
+    }
+    #rd-pret {
+      position: absolute;
+      right: 0;
+      top: -6px;
+      height: 54px;
+      padding: 0 22px;
+      border-radius: 14px;
+      background: var(--accent);
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 54px;
+      color: #fff;
+      white-space: nowrap;
+      opacity: 0;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="rendu"
+    data-width="1080"
+    data-height="1920"
+  >
+    <div id="rd-fenetre">
+      <div id="rd-barre">
+        <div class="rd-pastille" style="left: 26px"></div>
+        <div class="rd-pastille" style="left: 50px"></div>
+        <div class="rd-pastille" style="left: 74px"></div>
+        <div id="rd-titre"><span class="marque" data-var-text="marque">ninon.ia</span> <span class="rest" data-var-text="titre">— rendu</span></div>
+      </div>
+
+      <div id="rd-corps">
+        <div id="rd-regle">
+          <div id="rd-tc">00:10.26</div>
+          <svg id="rd-graduations" viewBox="0 0 718 30" data-layout-ignore></svg>
+        </div>
+
+        <div class="rd-piste" id="rd-p1" style="top: 52px">
+          <div class="rd-nom"><i style="background: #8b8a90"></i><span data-var-text="piste1">vidéo</span></div>
+          <div class="rd-voie">
+            <div class="rd-bloc b-video" id="rd-v1" style="left: 4px; width: 236px; background-image: url('assets/media/vignette0.jpg')"></div>
+            <div class="rd-bloc b-video" id="rd-v2" style="left: 244px; width: 196px; background-image: url('assets/media/vignette1.jpg')"></div>
+            <div class="rd-bloc b-video" id="rd-v3" style="left: 444px; width: 270px; background-image: url('assets/media/vignette2.jpg')"></div>
+          </div>
+        </div>
+        <div class="rd-piste" id="rd-p2" style="top: 148px">
+          <div class="rd-nom"><i style="background: #c2410c"></i><span data-var-text="piste2">briques</span></div>
+          <div class="rd-voie">
+            <div class="rd-bloc b-brique" id="rd-b1" style="left: 56px; width: 116px"></div>
+            <div class="rd-bloc b-brique" id="rd-b2" style="left: 286px; width: 104px"></div>
+            <div class="rd-bloc b-brique" id="rd-b3" style="left: 500px; width: 132px"></div>
+          </div>
+        </div>
+        <div class="rd-piste" id="rd-p3" style="top: 244px">
+          <div class="rd-nom"><i style="background: #ece4d8"></i><span data-var-text="piste3">titres</span></div>
+          <div class="rd-voie">
+            <div class="rd-bloc b-titre" id="rd-t1" style="left: 14px; width: 88px"></div>
+            <div class="rd-bloc b-titre" id="rd-t2" style="left: 214px; width: 112px"></div>
+            <div class="rd-bloc b-titre" id="rd-t3" style="left: 420px; width: 96px"></div>
+            <div class="rd-bloc b-titre" id="rd-t4" style="left: 600px; width: 104px"></div>
+          </div>
+        </div>
+        <div class="rd-piste" id="rd-p4" style="top: 340px">
+          <div class="rd-nom"><i style="background: #f0a37c"></i><span data-var-text="piste4">musique</span></div>
+          <div class="rd-voie">
+            <div class="rd-bloc b-musique" id="rd-m1" style="left: 4px; width: 710px">
+              <svg id="rd-onde" viewBox="0 0 710 64" preserveAspectRatio="none" data-layout-ignore></svg>
+            </div>
+          </div>
+        </div>
+
+        <div id="rd-reste" data-layout-ignore></div>
+        <div id="rd-tete" data-layout-ignore>
+          <div class="poignee"></div>
+          <div class="ligne"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="rd-progres">
+      <div id="rd-haut">
+        <div id="rd-quoi"><span class="t" data-var-text="quoi">Rendu</span><span class="f" data-var-text="fichier">final.mp4</span></div>
+        <div id="rd-pct"><span id="rd-nombre">41</span><span class="sym">%</span></div>
+      </div>
+      <div id="rd-rail">
+        <div id="rd-rempli"></div>
+        <div id="rd-reflet" data-layout-ignore></div>
+      </div>
+      <div id="rd-bas">
+        <div id="rd-format" data-var-text="format">1080×1920 · 30 i/s</div>
+        <div id="rd-droite" data-layout-allow-overlap>
+          <div id="rd-images">image 0326/795</div>
+          <div id="rd-pret" data-var-text="pret">prêt ✓</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const NS = "http://www.w3.org/2000/svg";
+      // Graduations de la règle (statiques).
+      const reg = document.getElementById("rd-graduations");
+      for (let i = 0; i <= 52; i++) {
+        const x = 1 + i * (716 / 52);
+        const grand = i % 4 === 0;
+        const r = document.createElementNS(NS, "rect");
+        r.setAttribute("x", x.toFixed(2));
+        r.setAttribute("y", grand ? "6" : "16");
+        r.setAttribute("width", "2");
+        r.setAttribute("height", grand ? "24" : "14");
+        r.setAttribute("fill", grand ? "#6a696f" : "#48474c");
+        reg.appendChild(r);
+      }
+      // Forme d'onde déterministe (aucun hasard).
+      const onde = document.getElementById("rd-onde");
+      const N = 118;
+      for (let i = 0; i < N; i++) {
+        const env = 0.55 + 0.45 * Math.sin(i * 0.09 + 0.6);
+        const v = Math.abs(Math.sin(i * 1.71) * 0.6 + Math.sin(i * 0.43 + 1.2) * 0.4);
+        const h = Math.max(6, 50 * env * (0.25 + 0.75 * v));
+        const r = document.createElementNS(NS, "rect");
+        r.setAttribute("x", (4 + i * 6).toFixed(1));
+        r.setAttribute("y", (32 - h / 2).toFixed(1));
+        r.setAttribute("width", "3.2");
+        r.setAttribute("height", h.toFixed(1));
+        r.setAttribute("rx", "1.6");
+        onde.appendChild(r);
+      }
+
+      // Durée et textes : lus sur la racine de la scène (son hôte, qui porte data-duration et data-variable-values).
+      const racine =
+        document.querySelector('[data-composition-id="rendu"][data-duration]') ||
+        document.querySelector("[data-composition-id][data-duration]");
+      const DUREE = parseFloat(racine.dataset.duration);
+      let V = {};
+      try {
+        V = JSON.parse(racine.getAttribute("data-variable-values") || "{}");
+      } catch (e) {
+        V = {};
+      }
+      const hf = window.__hyperframes;
+      if (!Object.keys(V).length && hf && hf.getVariables) V = hf.getVariables();
+      const nombreVar = (id, defaut) => {
+        const n = Number(V[id]);
+        return Number.isFinite(n) ? n : defaut;
+      };
+
+      const tl = gsap.timeline({ paused: true });
+      const P0 = Math.min(0.95, Math.max(0, nombreVar("depart", 41) / 100));
+      const T0 = 0.2;
+      const T1 = DUREE - 0.2;
+      const VOIE = 718;
+      const IMAGES = Math.max(1, Math.round(nombreVar("images", 795))); // 26,5 s × 30 i/s par défaut
+
+      // Entrée : la fenêtre se pose, les pistes et leurs blocs arrivent en cascade, puis la progression.
+      tl.fromTo("#rd-fenetre", { opacity: 0.35, y: 34 }, { opacity: 1, y: 0, duration: 0.34, ease: "power3.out" }, 0);
+      tl.fromTo(".rd-piste", { opacity: 0.3, x: -14 }, { opacity: 1, x: 0, duration: 0.28, ease: "power3.out", stagger: 0.04 }, 0.04);
+      tl.fromTo(".rd-bloc", { scaleX: 0.4, opacity: 0.3 }, { scaleX: 1, opacity: 1, duration: 0.3, ease: "expo.out", stagger: 0.012 }, 0.06);
+      tl.fromTo("#rd-progres", { opacity: 0.3, y: 24 }, { opacity: 1, y: 0, duration: 0.32, ease: "power3.out" }, 0.04);
+
+      // Progression 41 % → 100 % à vitesse constante ; tête de lecture, zone grisée et barre la suivent.
+      tl.fromTo("#rd-tete", { x: VOIE * P0 }, { x: VOIE - 1, duration: T1 - T0, ease: "none" }, T0);
+      tl.fromTo("#rd-reste", { scaleX: 1 - P0 }, { scaleX: 0, duration: T1 - T0, ease: "none" }, T0);
+      tl.fromTo("#rd-rempli", { scaleX: P0 }, { scaleX: 1, duration: T1 - T0, ease: "none" }, T0);
+
+      const nombre = document.getElementById("rd-nombre");
+      const images = document.getElementById("rd-images");
+      const tc = document.getElementById("rd-tc");
+      const etat = { p: P0 };
+      const ecrire = () => {
+        const p = etat.p;
+        nombre.textContent = String(Math.round(p * 100));
+        const img = Math.round(p * IMAGES);
+        images.textContent = "image " + String(img).padStart(4, "0") + "/" + IMAGES;
+        const s = (p * IMAGES) / 30;
+        const ss = Math.floor(s);
+        const ff = Math.floor((s - ss) * 30);
+        tc.textContent =
+          String(Math.floor(ss / 60)).padStart(2, "0") + ":" + String(ss % 60).padStart(2, "0") + "." + String(ff).padStart(2, "0");
+      };
+      ecrire();
+      tl.fromTo(etat, { p: P0 }, { p: 1, duration: T1 - T0, ease: "none", onUpdate: ecrire }, T0);
+
+      // 100 % : le chiffre passe à l'accent, « prêt ✓ » remplace le compteur d'images, un reflet traverse la barre.
+      tl.to("#rd-nombre", { color: "#f0a37c", duration: 0.2, ease: "power2.out" }, T1);
+      tl.to("#rd-images", { opacity: 0, filter: "blur(4px)", duration: 0.12, ease: "power2.in" }, T1);
+      tl.fromTo(
+        "#rd-pret",
+        { opacity: 0, scale: 0.9, filter: "blur(6px)" },
+        { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.18, ease: "expo.out" },
+        T1 + 0.03,
+      );
+      tl.fromTo("#rd-reflet", { x: -160, opacity: 0 }, { x: 960, opacity: 1, duration: 0.19, ease: "power2.in" }, T1 + 0.01);
+      tl.to("#rd-tete .poignee", { backgroundColor: "#f0a37c", duration: 0.15, ease: "power2.out" }, T1);
+      tl.set({}, {}, DUREE);
+
+      window.__timelines["rendu"] = tl;
+    })();
+  </script>
+</template>

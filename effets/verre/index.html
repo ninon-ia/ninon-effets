@@ -1,0 +1,629 @@
+<!doctype html>
+<!--
+  Effet « verre » (bibliothèque effets/, d'après V1 du reel démo studio, 26/10/2026).
+  1080×1920, 30 i/s, durée DUREE (2,5 s par défaut), muet. Le clip en plein cadre ; autour du visage, 5 widgets en verre dépoli :
+  (a) grand chiffre · (c) anneau · (b) minutes sur une barre · (d) carte de rendu · (e) pastille de marque.
+  Verre : assets/media/flou-a…e.mp4 (le clip très flou, préparé par outils/rendre-effet.sh) dans le masque arrondi de
+  chaque widget, calé sur la vidéo nette, + ombre légère (lisible sur fond clair) + voile blanc + filet clair 1,5 px.
+  Widgets hors de la colonne du visage (x 260–750, y 300–1000).
+  Temps : apparitions 0,05–0,6 s, compteurs jusqu'à 0,9 s, anneau et rendu remplis vers 0,64 × DUREE, dérive 0,4 s → DUREE.
+  Textes : variables déclarées sur <html> (voir effet.json).
+-->
+<html
+  lang="fr"
+  data-resolution="portrait"
+  data-composition-variables='[
+    {"id":"chiffre","type":"number","label":"Grand chiffre (haut droite)","default":65},
+    {"id":"chiffre_entete","type":"string","label":"Étiquette du grand chiffre","default":"Pub"},
+    {"id":"chiffre_legende","type":"string","label":"Légende du grand chiffre","default":"logiciels de pub supprimés"},
+    {"id":"anneau_titre","type":"string","label":"Texte au centre de l’anneau","default":"1080p"},
+    {"id":"anneau_valeur","type":"number","label":"Remplissage de l’anneau (%)","default":100,"min":0,"max":100},
+    {"id":"minutes","type":"number","label":"Valeur de la barre (bas gauche)","default":6},
+    {"id":"minutes_max","type":"number","label":"Maximum de la barre","default":60},
+    {"id":"minutes_unite","type":"string","label":"Unité de la barre","default":"min"},
+    {"id":"minutes_entete","type":"string","label":"Étiquette de la barre","default":"Sur 60 minutes"},
+    {"id":"minutes_legende","type":"string","label":"Légende de la barre","default":"de pub par heure · Prime"},
+    {"id":"rendu_entete","type":"string","label":"Étiquette de la carte de rendu","default":"Export"},
+    {"id":"rendu_titre","type":"string","label":"Titre de la carte de rendu","default":"Rendu"},
+    {"id":"rendu_specs","type":"string","label":"Ligne technique de la carte de rendu","default":"1080×1920 · 30 i/s"},
+    {"id":"pastille_texte","type":"string","label":"Pastille du bas : texte","default":"monté par"},
+    {"id":"pastille_marque","type":"string","label":"Pastille du bas : marque","default":"ninon.ia"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Newsreader";
+        src: url("assets/fonts/Newsreader-latin.woff2") format("woff2");
+        font-weight: 200 800;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Newsreader";
+        src: url("assets/fonts/Newsreader-latin-ext.woff2") format("woff2");
+        font-weight: 200 800;
+        font-style: normal;
+        font-display: block;
+        unicode-range: U+0100-024F, U+1E00-1EFF;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #000;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        --accent: #c2410c;
+        --accent-clair: #f08a4b;
+        --sans: "Inter", sans-serif;
+        --mono: "IBM Plex Mono", monospace;
+        --serif: "Newsreader", serif;
+        font-family: var(--sans);
+        color: #fff;
+      }
+      #clip {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 1920px;
+        object-fit: cover;
+        z-index: 1;
+      }
+      /* Assombrit le bas du cadre (vêtement clair) pour que le texte blanc des widgets du bas reste lisible.
+         Le même voile est reproduit dans chaque calque de verre pour garder l'alignement. */
+      .voile {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 1920px;
+        background: linear-gradient(
+          180deg,
+          rgba(10, 8, 12, 0) 0%,
+          rgba(10, 8, 12, 0) 48%,
+          rgba(10, 8, 12, 0.5) 58%,
+          rgba(10, 8, 12, 0.62) 100%
+        );
+      }
+      #voile {
+        z-index: 2;
+      }
+
+      /* ---------- widget de verre ---------- */
+      .w {
+        position: absolute;
+        z-index: 3;
+        border-radius: 44px;
+        box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
+      }
+      .w-fond {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        overflow: hidden;
+      }
+      .w-calque {
+        position: absolute;
+        width: 1080px;
+        height: 1920px;
+      }
+      .w-calque video {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 1920px;
+        object-fit: cover;
+      }
+      /* Ombre fixe sous le voile blanc : le texte blanc reste lisible quand le décor est clair (mur blanc, fenêtre). */
+      .w-ombre {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: rgba(16, 12, 16, 0.3);
+      }
+      .w-teinte {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(160deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 45%, rgba(255, 255, 255, 0.08) 100%);
+        border: 1.5px solid rgba(255, 255, 255, 0.42);
+        box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.35);
+      }
+      .w-contenu {
+        position: absolute;
+        inset: 0;
+        padding: 30px 34px;
+        text-shadow: 0 1px 14px rgba(0, 0, 0, 0.32);
+      }
+      .entete {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 25px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.86);
+        height: 28px;
+        white-space: nowrap;
+      }
+      .pastille {
+        flex: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent-clair);
+        box-shadow: 0 0 0 4px rgba(240, 138, 75, 0.25);
+      }
+      .rail {
+        position: relative;
+        height: 14px;
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.24);
+        overflow: hidden;
+      }
+      .rail-plein {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 100%;
+        border-radius: 7px;
+        background: linear-gradient(90deg, var(--accent) 0%, var(--accent-clair) 100%);
+        transform-origin: 0 50%;
+      }
+
+      /* (a) grand chiffre */
+      #w-a {
+        left: 752px;
+        top: 232px;
+        width: 300px;
+        height: 300px;
+      }
+      #wa-chiffre {
+        margin-top: 4px;
+        height: 150px;
+        display: flex;
+        align-items: flex-end;
+        font-size: 150px;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      #wa-legende {
+        margin-top: 8px;
+        font-size: 29px;
+        font-weight: 600;
+        line-height: 1.15;
+        color: rgba(255, 255, 255, 0.95);
+      }
+
+      /* (c) anneau */
+      #w-c {
+        left: 792px;
+        top: 552px;
+        width: 260px;
+        height: 252px;
+      }
+      #w-c .w-contenu {
+        padding: 0;
+      }
+      #wc-svg {
+        position: absolute;
+        left: 22px;
+        top: 18px;
+        width: 216px;
+        height: 216px;
+      }
+      #wc-centre {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 260px;
+        height: 252px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      #wc-titre {
+        font-size: 46px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      #wc-pct {
+        margin-top: 8px;
+        font-size: 28px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.95);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* (b) minutes */
+      #w-b {
+        left: 48px;
+        top: 1096px;
+        width: 568px;
+        height: 284px;
+      }
+      #wb-ligne {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        margin-top: 6px;
+        white-space: nowrap;
+      }
+      #wb-chiffre {
+        font-size: 104px;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        font-variant-numeric: tabular-nums;
+      }
+      #wb-unite {
+        font-size: 48px;
+        font-weight: 700;
+      }
+      #wb-rail {
+        margin-top: 18px;
+      }
+      #wb-graduation {
+        position: relative;
+        height: 32px;
+        margin-top: 8px;
+        font-family: var(--mono);
+        font-size: 25px;
+        color: rgba(255, 255, 255, 0.95);
+      }
+      #wb-graduation span {
+        position: absolute;
+        top: 0;
+      }
+      #wb-legende {
+        margin-top: 6px;
+        font-size: 29px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.95);
+        white-space: nowrap;
+      }
+
+      /* (d) carte de rendu */
+      #w-d {
+        left: 640px;
+        top: 1096px;
+        width: 392px;
+        height: 284px;
+      }
+      #wd-ligne {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-top: 18px;
+        height: 58px;
+        white-space: nowrap;
+      }
+      #wd-titre {
+        font-size: 48px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      #wd-pct {
+        font-size: 32px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: #ffb27e;
+      }
+      #wd-rail {
+        margin-top: 18px;
+      }
+      #wd-spec {
+        margin-top: 22px;
+        font-family: var(--mono);
+        font-size: 27px;
+        color: rgba(255, 255, 255, 0.95);
+        white-space: nowrap;
+      }
+
+      /* (e) pastille de marque : largeur calculée au démarrage d'après le texte, centrée. */
+      #w-e {
+        left: 290px;
+        top: 1408px;
+        width: 500px;
+        height: 88px;
+        border-radius: 44px;
+      }
+      #w-e .w-contenu {
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        white-space: nowrap;
+      }
+      #we-monte {
+        font-size: 30px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.92);
+      }
+      #we-marque {
+        font-family: var(--serif);
+        font-size: 32px;
+        font-weight: 500;
+        letter-spacing: 0.3em;
+        margin-right: -0.3em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2.5" data-width="1080" data-height="1920">
+      <video
+        id="clip"
+        class="clip"
+        src="assets/media/clip.mp4"
+        data-start="0"
+        data-duration="2.5"
+        data-track-index="0"
+        muted
+        playsinline
+      ></video>
+      <div id="voile" class="voile clip" data-start="0" data-duration="2.5" data-track-index="1"></div>
+
+      <!-- (a) grand chiffre -->
+      <div id="w-a" class="w">
+        <div class="w-fond">
+          <div id="wa-calque" class="w-calque" data-layout-allow-overflow style="left: -752px; top: -232px">
+            <video id="wa-flou" class="clip" src="assets/media/flou-a.mp4" data-start="0" data-duration="2.5" data-track-index="2" muted playsinline></video>
+            <div class="voile"></div>
+          </div>
+          <div class="w-ombre"></div>
+        </div>
+        <div class="w-teinte"></div>
+        <div class="w-contenu">
+          <div class="entete"><span class="pastille"></span><span id="wa-entete" data-var-text="chiffre_entete">Pub</span></div>
+          <div id="wa-chiffre">0</div>
+          <div id="wa-legende" data-var-text="chiffre_legende">logiciels de pub supprimés</div>
+        </div>
+      </div>
+
+      <!-- (c) anneau -->
+      <div id="w-c" class="w">
+        <div class="w-fond">
+          <div id="wc-calque" class="w-calque" data-layout-allow-overflow style="left: -792px; top: -552px">
+            <video id="wc-flou" class="clip" src="assets/media/flou-c.mp4" data-start="0" data-duration="2.5" data-track-index="3" muted playsinline></video>
+            <div class="voile"></div>
+          </div>
+          <div class="w-ombre"></div>
+        </div>
+        <div class="w-teinte"></div>
+        <div class="w-contenu">
+          <svg id="wc-svg" viewBox="0 0 216 216">
+            <defs>
+              <linearGradient id="wc-degrade" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#f08a4b" />
+                <stop offset="1" stop-color="#c2410c" />
+              </linearGradient>
+            </defs>
+            <circle cx="108" cy="108" r="90" fill="none" stroke="rgba(255,255,255,0.24)" stroke-width="18" />
+            <circle
+              id="wc-arc"
+              cx="108"
+              cy="108"
+              r="90"
+              fill="none"
+              stroke="url(#wc-degrade)"
+              stroke-width="18"
+              stroke-linecap="round"
+              stroke-dasharray="565.49"
+              stroke-dashoffset="565.49"
+              transform="rotate(-90 108 108)"
+            />
+          </svg>
+          <div id="wc-centre">
+            <div id="wc-titre" data-var-text="anneau_titre">1080p</div>
+            <div id="wc-pct">0&#8239;%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- (b) minutes sur une barre -->
+      <div id="w-b" class="w">
+        <div class="w-fond">
+          <div id="wb-calque" class="w-calque" data-layout-allow-overflow style="left: -48px; top: -1096px">
+            <video id="wb-flou" class="clip" src="assets/media/flou-b.mp4" data-start="0" data-duration="2.5" data-track-index="4" muted playsinline></video>
+            <div class="voile"></div>
+          </div>
+          <div class="w-ombre"></div>
+        </div>
+        <div class="w-teinte"></div>
+        <div class="w-contenu">
+          <div class="entete"><span class="pastille"></span><span id="wb-entete" data-var-text="minutes_entete">Sur 60 minutes</span></div>
+          <div id="wb-ligne"><span id="wb-chiffre">0</span><span id="wb-unite" data-var-text="minutes_unite">min</span></div>
+          <div id="wb-rail" class="rail"><div id="wb-plein" class="rail-plein"></div></div>
+          <div id="wb-graduation">
+            <span id="wb-g0" style="left: 0">0</span><span id="wb-g1" style="left: 46%">30</span><span id="wb-g2" style="right: 0">60 min</span>
+          </div>
+          <div id="wb-legende" data-var-text="minutes_legende">de pub par heure · Prime</div>
+        </div>
+      </div>
+
+      <!-- (d) carte de rendu -->
+      <div id="w-d" class="w">
+        <div class="w-fond">
+          <div id="wd-calque" class="w-calque" data-layout-allow-overflow style="left: -640px; top: -1096px">
+            <video id="wd-flou" class="clip" src="assets/media/flou-d.mp4" data-start="0" data-duration="2.5" data-track-index="5" muted playsinline></video>
+            <div class="voile"></div>
+          </div>
+          <div class="w-ombre"></div>
+        </div>
+        <div class="w-teinte"></div>
+        <div class="w-contenu">
+          <div class="entete"><span class="pastille"></span><span id="wd-entete" data-var-text="rendu_entete">Export</span></div>
+          <div id="wd-ligne"><span id="wd-titre" data-var-text="rendu_titre">Rendu</span><span id="wd-pct">0&#8239;%</span></div>
+          <div id="wd-rail" class="rail"><div id="wd-plein" class="rail-plein"></div></div>
+          <div id="wd-spec" data-var-text="rendu_specs">1080×1920 · 30 i/s</div>
+        </div>
+      </div>
+
+      <!-- (e) pastille de marque -->
+      <div id="w-e" class="w">
+        <div class="w-fond">
+          <div id="we-calque" class="w-calque" data-layout-allow-overflow style="left: -290px; top: -1408px">
+            <video id="we-flou" class="clip" src="assets/media/flou-e.mp4" data-start="0" data-duration="2.5" data-track-index="6" muted playsinline></video>
+            <div class="voile"></div>
+          </div>
+          <div class="w-ombre"></div>
+        </div>
+        <div class="w-teinte"></div>
+        <div class="w-contenu">
+          <span class="pastille"></span><span id="we-monte" data-var-text="pastille_texte">monté par</span><span id="we-marque" data-var-text="pastille_marque">ninon.ia</span>
+        </div>
+      </div>
+    </div>
+    <script>
+      const DUREE = parseFloat(document.querySelector("[data-composition-id]").dataset.duration);
+
+      // Variables : défauts déclarés sur <html>, remplacés par les valeurs du rendu.
+      const V = {};
+      JSON.parse(document.documentElement.dataset.compositionVariables).forEach((d) => (V[d.id] = d.default));
+      const hf = window.__hyperframes;
+      if (hf && typeof hf.getVariables === "function") Object.assign(V, hf.getVariables() || {});
+      const nombre = (v, def) => (Number.isFinite(parseFloat(v)) ? parseFloat(v) : def);
+      const $ = (sel) => document.querySelector(sel);
+
+      // Nombres à la française : décimales de la valeur cible (2 au plus), virgule.
+      const decimales = (v) => Math.min(2, (String(v).split(".")[1] || "").length);
+      const fr = (v, d) => v.toFixed(d).replace(".", ",");
+
+      // Ajuste une taille de police d'après le nombre de caractères (déterministe, sans mesure de police).
+      function ajuste(el, texte, largeur, emParCar, max, min) {
+        const n = Math.max(1, String(texte).length);
+        el.style.fontSize = Math.max(min, Math.min(max, largeur / (n * emParCar))) + "px";
+      }
+
+      const chiffre = nombre(V.chiffre, 65);
+      const minutes = nombre(V.minutes, 6);
+      const minutesMax = Math.max(nombre(V.minutes_max, 60), 0.0001);
+      const anneau = Math.max(0, Math.min(100, nombre(V.anneau_valeur, 100)));
+      const dChiffre = decimales(chiffre);
+      const dMinutes = decimales(minutes);
+
+      // Textes simples (doublent data-var-text, au cas où la liaison passe après ce script).
+      [
+        ["#wa-entete", "chiffre_entete"],
+        ["#wa-legende", "chiffre_legende"],
+        ["#wc-titre", "anneau_titre"],
+        ["#wb-entete", "minutes_entete"],
+        ["#wb-unite", "minutes_unite"],
+        ["#wb-legende", "minutes_legende"],
+        ["#wd-entete", "rendu_entete"],
+        ["#wd-titre", "rendu_titre"],
+        ["#wd-spec", "rendu_specs"],
+        ["#we-monte", "pastille_texte"],
+        ["#we-marque", "pastille_marque"],
+      ].forEach(([sel, id]) => ($(sel).textContent = String(V[id])));
+
+      // Graduation de la barre : 0 · moitié · maximum + unité.
+      const dMax = decimales(minutesMax);
+      $("#wb-g1").textContent = fr(minutesMax / 2, Math.max(dMax, minutesMax % 2 ? 1 : 0));
+      $("#wb-g2").textContent = fr(minutesMax, dMax) + " " + V.minutes_unite;
+
+      // Tailles : tout tient dans son widget, quels que soient les textes.
+      ajuste($("#wa-chiffre"), fr(chiffre, dChiffre), 232, 0.6, 150, 64);
+      ajuste($("#wa-legende"), "x".repeat(Math.ceil(String(V.chiffre_legende).length / 2)), 232, 0.5, 29, 20);
+      ajuste($("#wa-entete"), V.chiffre_entete, 200, 0.8, 25, 17);
+      ajuste($("#wc-titre"), V.anneau_titre, 150, 0.62, 46, 22);
+      ajuste($("#wb-entete"), V.minutes_entete, 460, 0.8, 25, 17);
+      ajuste($("#wb-chiffre"), fr(minutes, dMinutes) + "x".repeat(String(V.minutes_unite).length * 0.5), 440, 0.6, 104, 56);
+      ajuste($("#wb-legende"), V.minutes_legende, 500, 0.53, 29, 19);
+      ajuste($("#wd-entete"), V.rendu_entete, 290, 0.8, 25, 17);
+      ajuste($("#wd-titre"), V.rendu_titre, 220, 0.62, 48, 26);
+      ajuste($("#wd-spec"), V.rendu_specs, 324, 0.6, 27, 17);
+
+      // Pastille : largeur d'après le texte, centrée ; le calque flou suit.
+      const nPastille = String(V.pastille_texte).length * 15.5 + String(V.pastille_marque).length * 32 * 0.95;
+      const lPastille = Math.round(Math.max(320, Math.min(980, nPastille + 30 + 16 * 2 + 56)));
+      const xPastille = Math.round((1080 - lPastille) / 2);
+      $("#w-e").style.width = lPastille + "px";
+      $("#w-e").style.left = xPastille + "px";
+      $("#we-calque").style.left = -xPastille + "px";
+
+      const tl = gsap.timeline({ paused: true });
+
+      // Apparitions décalées : échelle 0,9 → 1 + opacité.
+      ["#w-a", "#w-c", "#w-b", "#w-d", "#w-e"].forEach((sel, i) => {
+        tl.fromTo(sel, { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.4)" }, 0.05 + i * 0.06);
+      });
+
+      // Compteurs.
+      function compteur(sel, fin, debut, duree, suffixe, ease, d) {
+        const o = { v: 0 };
+        const el = $(sel);
+        el.textContent = fr(0, d || 0) + (suffixe || "");
+        tl.to(
+          o,
+          {
+            v: fin,
+            duration: duree,
+            ease: ease || "power2.out",
+            onUpdate: () => {
+              el.textContent = fr(o.v, d || 0) + (suffixe || "");
+            },
+          },
+          debut,
+        );
+      }
+      // Anneau et rendu : remplissage continu, fini vers 0,64 × DUREE (1,6 s pour 2,5 s).
+      const finJauge = 0.64 * DUREE;
+      compteur("#wa-chiffre", chiffre, 0.08, 0.85, "", "power2.out", dChiffre);
+      compteur("#wb-chiffre", minutes, 0.2, 0.7, "", "power2.out", dMinutes);
+      compteur("#wc-pct", anneau, 0.15, finJauge - 0.15, " %", "power2.inOut", 0);
+      compteur("#wd-pct", 100, 0.28, finJauge - 0.28, " %", "power1.inOut", 0);
+
+      tl.fromTo("#wb-plein", { scaleX: 0 }, { scaleX: Math.max(0, Math.min(1, minutes / minutesMax)), duration: 1.2, ease: "power2.out" }, 0.25);
+      tl.fromTo(
+        "#wc-arc",
+        { attr: { "stroke-dashoffset": 565.49 } },
+        { attr: { "stroke-dashoffset": 565.49 * (1 - anneau / 100) }, duration: finJauge - 0.15, ease: "power2.inOut" },
+        0.15,
+      );
+      tl.fromTo("#wd-plein", { scaleX: 0 }, { scaleX: 1, duration: finJauge - 0.28, ease: "power1.inOut" }, 0.28);
+
+      // Dérive en parallaxe 0,4 s → DUREE ; le calque flou contre-dérive pour rester calé sur la vidéo nette.
+      const ampl = Math.min(1.6, (DUREE - 0.4) / 2.1);
+      [
+        ["#w-a", "#wa-calque", -6, -16],
+        ["#w-c", "#wc-calque", 8, 12],
+        ["#w-b", "#wb-calque", -8, -10],
+        ["#w-d", "#wd-calque", 6, -14],
+        ["#w-e", "#we-calque", 0, 8],
+      ].forEach(([w, c, dx, dy]) => {
+        tl.fromTo(w, { x: 0, y: 0 }, { x: dx * ampl, y: dy * ampl, duration: DUREE - 0.4, ease: "sine.inOut" }, 0.4);
+        tl.fromTo(c, { x: 0, y: 0 }, { x: -dx * ampl, y: -dy * ampl, duration: DUREE - 0.4, ease: "sine.inOut" }, 0.4);
+      });
+
+      tl.set({}, {}, DUREE);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

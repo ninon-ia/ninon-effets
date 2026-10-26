@@ -1,0 +1,524 @@
+<!doctype html>
+<!--
+  Effet « graphique » (bibliothèque effets/, d'après V4 du reel démo studio, 26/10/2026).
+  1080×1920, 30 i/s, durée DUREE (2,5 s par défaut), muet. Écran partagé :
+  en haut un tableau papier (#f4efe6, y 0–900) : sur-titre, titre + mot en italique souligné à la main,
+  barres horizontales lues dans la variable `donnees` (2 à 7 barres, la plus haute en orange), ligne de moyenne
+  calculée (« moy. X,Y »), signature écrite à la main ;
+  en bas le clip (assets/media/clip.mp4) dans une carte arrondie (rayon 36 px), fondu noir en bas, lente poussée jusqu'à DUREE.
+  Temps : titre 0–0,3 s, trait 0,15–0,55 s, barres 0,05–0,75 s avec compteurs, moyenne 0,8–1,1 s,
+  signature 0,6–0,95 s, puis léger zoom du tableau jusqu'à DUREE.
+  Tout est dans ce fichier (pas de sous-composition) : les variables se lisent directement sur la racine.
+-->
+<html
+  lang="fr"
+  data-resolution="portrait"
+  data-composition-variables='[
+    {"id":"kicker","type":"string","label":"Sur-titre (petit, en haut à gauche)","default":"briques graphiques · par style"},
+    {"id":"marque","type":"string","label":"Marque (en haut à droite)","default":"ninon.ia"},
+    {"id":"titre","type":"string","label":"Titre (partie droite)","default":"Mes styles,"},
+    {"id":"titre_italique","type":"string","label":"Fin du titre en italique, soulignée","default":"en briques"},
+    {"id":"donnees","type":"string","label":"Données du graphique (JSON : 2 à 7 barres {label, valeur})","default":"[{\"label\":\"max-fisher\",\"valeur\":18},{\"label\":\"calque\",\"valeur\":15},{\"label\":\"split-motion\",\"valeur\":7},{\"label\":\"enquete-courte\",\"valeur\":6},{\"label\":\"ninon-split\",\"valeur\":1}]"},
+    {"id":"moyenne_prefixe","type":"string","label":"Préfixe de la moyenne","default":"moy."},
+    {"id":"signature","type":"string","label":"Signature à la main","default":"par Ninon"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Newsreader";
+        src: url("assets/fonts/Newsreader-latin.woff2") format("woff2");
+        font-weight: 200 800;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Newsreader";
+        src: url("assets/fonts/Newsreader-latin-ext.woff2") format("woff2");
+        font-weight: 200 800;
+        font-style: normal;
+        font-display: block;
+        unicode-range: U+0100-024F, U+1E00-1EFF;
+      }
+      @font-face {
+        font-family: "Newsreader";
+        src: url("assets/fonts/Newsreader-Italic-latin.woff2") format("woff2");
+        font-weight: 200 800;
+        font-style: italic;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Newsreader";
+        src: url("assets/fonts/Newsreader-Italic-latin-ext.woff2") format("woff2");
+        font-weight: 200 800;
+        font-style: italic;
+        font-display: block;
+        unicode-range: U+0100-024F, U+1E00-1EFF;
+      }
+      @font-face {
+        font-family: "Caveat";
+        src: url("assets/fonts/Caveat-latin.woff2") format("woff2");
+        font-weight: 400 700;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Caveat";
+        src: url("assets/fonts/Caveat-latin-ext.woff2") format("woff2");
+        font-weight: 400 700;
+        font-style: normal;
+        font-display: block;
+        unicode-range: U+0100-024F, U+1E00-1EFF;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #0e0d0f;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        --papier: #f4efe6;
+        --encre: #1f1b18;
+        --gris-chaud: #4a423c;
+        --gris-texte: #6b625a;
+        --accent: #c2410c;
+        --mono: "IBM Plex Mono", monospace;
+        --serif: "Newsreader", serif;
+        font-family: var(--serif);
+        color: var(--encre);
+      }
+      #fond {
+        position: absolute;
+        inset: 0;
+        background: #0e0d0f;
+        z-index: 0;
+      }
+
+      /* ---------- carte vidéo (bas) ---------- */
+      #carte {
+        position: absolute;
+        left: 24px;
+        top: 924px;
+        width: 1032px;
+        height: 972px;
+        border-radius: 36px;
+        overflow: hidden;
+        z-index: 1;
+        background: #000;
+      }
+      #carte-zoom {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1032px;
+        height: 972px;
+        transform-origin: 46% 40%;
+      }
+      /* Le clip à la largeur de la carte (1032 px → hauteur 1835 px), remonté de 200 px :
+         la carte montre la source de y 210 à y 1227 (front → buste). */
+      #clip {
+        position: absolute;
+        left: 0;
+        top: -200px;
+        width: 1032px;
+        height: 1835px;
+        object-fit: cover;
+      }
+      #carte-fondu {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1032px;
+        height: 972px;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 64%, rgba(0, 0, 0, 0.55) 84%, rgba(0, 0, 0, 0.88) 100%);
+      }
+
+      /* ---------- tableau papier (haut) ---------- */
+      #gr-tableau {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 900px;
+        z-index: 2;
+        border-radius: 0 0 40px 40px;
+        background-color: var(--papier);
+        background-image: radial-gradient(circle, rgba(74, 66, 60, 0.13) 1.6px, transparent 1.8px);
+        background-size: 36px 36px;
+        background-position: 10px 10px;
+        overflow: hidden;
+      }
+      #gr-contenu {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 60%;
+      }
+      #gr-entete {
+        position: absolute;
+        left: 64px;
+        right: 64px;
+        top: 232px;
+        height: 34px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 24px;
+        white-space: nowrap;
+      }
+      #gr-kicker {
+        font-family: var(--mono);
+        font-size: 28px;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        color: var(--gris-texte);
+        overflow: hidden;
+      }
+      #gr-marque {
+        flex: none;
+        font-family: var(--serif);
+        font-size: 28px;
+        font-weight: 500;
+        letter-spacing: 0.3em;
+        margin-right: -0.3em;
+        text-transform: uppercase;
+        color: var(--encre);
+      }
+      #gr-titre {
+        position: absolute;
+        left: 60px;
+        top: 278px;
+        height: 96px;
+        display: flex;
+        align-items: flex-end;
+        font-size: 90px;
+        font-weight: 500;
+        line-height: 1;
+        letter-spacing: -0.015em;
+        white-space: nowrap;
+      }
+      #gr-titre-ital {
+        position: relative;
+        display: inline-block;
+        font-style: italic;
+        font-weight: 500;
+      }
+      /* Trait à la main sous le mot en italique : suit sa largeur, révélé de gauche à droite. */
+      #gr-trait {
+        position: absolute;
+        left: -4%;
+        top: 0.96em;
+        width: 104%;
+        height: 0.49em;
+        overflow: visible;
+      }
+
+      /* graphique */
+      #gr-axe {
+        position: absolute;
+        left: 322px;
+        top: 450px;
+        width: 2px;
+        height: 384px;
+        background: var(--encre);
+        opacity: 0.55;
+      }
+      .gr-ligne {
+        position: absolute;
+        left: 0;
+        top: 458px;
+        width: 1080px;
+        height: 50px;
+      }
+      .gr-nom {
+        position: absolute;
+        left: 28px;
+        width: 280px;
+        top: 0;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        font-family: var(--mono);
+        font-size: 28px;
+        font-weight: 400;
+        color: var(--gris-texte);
+        white-space: nowrap;
+      }
+      .gr-barre {
+        position: absolute;
+        left: 324px;
+        top: 2px;
+        height: 46px;
+        width: 100px;
+        border-radius: 0 8px 8px 0;
+        background: var(--gris-chaud);
+        transform-origin: 0 50%;
+      }
+      .gr-val {
+        position: absolute;
+        left: 400px;
+        top: 0;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        font-family: "Inter", sans-serif;
+        font-size: 36px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        color: var(--encre);
+        white-space: nowrap;
+      }
+      .gr-ligne.haut .gr-barre {
+        background: var(--accent);
+      }
+      .gr-ligne.haut .gr-nom {
+        color: var(--encre);
+        font-weight: 700;
+      }
+      .gr-ligne.haut .gr-val {
+        color: var(--accent);
+      }
+      #gr-moy {
+        position: absolute;
+        left: 645px;
+        top: 446px;
+        width: 3px;
+        height: 392px;
+        background-image: linear-gradient(180deg, var(--encre) 0, var(--encre) 14px, transparent 14px, transparent 24px);
+        background-size: 3px 24px;
+        transform-origin: 50% 0;
+      }
+      #gr-moy-txt {
+        position: absolute;
+        left: 545px;
+        width: 200px;
+        top: 846px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 29px;
+        font-weight: 700;
+        color: var(--encre);
+        white-space: nowrap;
+      }
+      #gr-signe {
+        position: absolute;
+        left: 802px;
+        top: 826px;
+        font-family: "Caveat", cursive;
+        font-size: 52px;
+        font-weight: 600;
+        color: var(--accent);
+        transform-origin: 0 50%;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2.5" data-width="1080" data-height="1920">
+      <div id="fond"></div>
+      <div id="carte" data-layout-allow-overflow>
+        <div id="carte-zoom">
+          <video
+            id="clip"
+            class="clip"
+            src="assets/media/clip.mp4"
+            data-start="0"
+            data-duration="2.5"
+            data-track-index="0"
+            muted
+            playsinline
+          ></video>
+        </div>
+        <div id="carte-fondu"></div>
+      </div>
+
+      <div id="gr-tableau">
+        <div id="gr-contenu">
+          <div id="gr-entete">
+            <span id="gr-kicker" data-var-text="kicker">briques graphiques · par style</span>
+            <span id="gr-marque" data-var-text="marque">ninon.ia</span>
+          </div>
+          <div id="gr-titre">
+            <span id="gr-titre-txt" data-var-text="titre">Mes styles,</span>&nbsp;<span id="gr-titre-ital"
+              ><span id="gr-titre-ital-txt" data-var-text="titre_italique">en briques</span
+              ><svg id="gr-trait" viewBox="0 0 420 44" preserveAspectRatio="none" data-layout-ignore>
+                <path
+                  d="M6 26 C 70 14, 150 30, 230 20 S 360 12, 414 22"
+                  fill="none"
+                  stroke="#c2410c"
+                  stroke-width="9"
+                  stroke-linecap="round"
+                  vector-effect="non-scaling-stroke"
+                /></svg
+            ></span>
+          </div>
+
+          <div id="gr-axe"></div>
+
+          <!-- 7 lignes au plus ; celles qui ne servent pas sont masquées au démarrage. -->
+          <div id="gr-l1" class="gr-ligne"><div class="gr-nom"></div><div class="gr-barre"></div><div class="gr-val">0</div></div>
+          <div id="gr-l2" class="gr-ligne"><div class="gr-nom"></div><div class="gr-barre"></div><div class="gr-val">0</div></div>
+          <div id="gr-l3" class="gr-ligne"><div class="gr-nom"></div><div class="gr-barre"></div><div class="gr-val">0</div></div>
+          <div id="gr-l4" class="gr-ligne"><div class="gr-nom"></div><div class="gr-barre"></div><div class="gr-val">0</div></div>
+          <div id="gr-l5" class="gr-ligne"><div class="gr-nom"></div><div class="gr-barre"></div><div class="gr-val">0</div></div>
+          <div id="gr-l6" class="gr-ligne"><div class="gr-nom"></div><div class="gr-barre"></div><div class="gr-val">0</div></div>
+          <div id="gr-l7" class="gr-ligne"><div class="gr-nom"></div><div class="gr-barre"></div><div class="gr-val">0</div></div>
+
+          <div id="gr-moy"></div>
+          <div id="gr-moy-txt">moy. 9,4</div>
+          <div id="gr-signe" data-var-text="signature">par Ninon</div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const DUREE = parseFloat(document.querySelector("[data-composition-id]").dataset.duration);
+
+      // Variables : défauts déclarés sur <html>, remplacés par les valeurs du rendu.
+      const DECL = JSON.parse(document.documentElement.dataset.compositionVariables);
+      const V = {};
+      DECL.forEach((d) => (V[d.id] = d.default));
+      const hf = window.__hyperframes;
+      if (hf && typeof hf.getVariables === "function") Object.assign(V, hf.getVariables() || {});
+      const $ = (sel) => document.querySelector(sel);
+
+      // Données : JSON [{label, valeur}], 2 à 7 barres. Illisible → données par défaut.
+      function lireDonnees(texte) {
+        try {
+          const brut = typeof texte === "string" ? JSON.parse(texte) : texte;
+          const d = (Array.isArray(brut) ? brut : [])
+            .map((x) => ({ label: String(x.label ?? x.nom ?? ""), valeur: parseFloat(x.valeur ?? x.value) }))
+            .filter((x) => Number.isFinite(x.valeur) && x.valeur >= 0)
+            .slice(0, 7);
+          return d.length >= 1 ? d : null;
+        } catch (e) {
+          return null;
+        }
+      }
+      const donnees = lireDonnees(V.donnees) || lireDonnees(DECL.find((d) => d.id === "donnees").default);
+      const N = donnees.length;
+
+      const decimales = (v) => Math.min(2, (String(v).split(".")[1] || "").length);
+      const fr = (v, d) => v.toFixed(d).replace(".", ",");
+      function ajuste(el, texte, largeur, emParCar, max, min) {
+        const n = Math.max(1, String(texte).length);
+        el.style.fontSize = Math.max(min, Math.min(max, largeur / (n * emParCar))) + "px";
+      }
+
+      // Textes.
+      $("#gr-kicker").textContent = String(V.kicker);
+      $("#gr-marque").textContent = String(V.marque);
+      $("#gr-titre-txt").textContent = String(V.titre);
+      $("#gr-titre-ital-txt").textContent = String(V.titre_italique);
+      $("#gr-signe").textContent = String(V.signature);
+      ajuste($("#gr-kicker"), V.kicker, 952 - String(V.marque).length * 26 - 24, 0.6, 28, 18);
+      ajuste($("#gr-titre"), String(V.titre) + " " + String(V.titre_italique), 960, 0.44, 90, 48);
+
+      // Géométrie des barres : bloc de N lignes centré dans la zone y 450–834.
+      const pas = Math.min(96, 384 / N);
+      const hBarre = Math.round(Math.min(56, pas * 0.6));
+      const y0 = 450 + (384 - N * pas) / 2;
+      const max = Math.max(...donnees.map((x) => x.valeur), 0.0001);
+      const carsVal = Math.max(...donnees.map((x) => fr(x.valeur, decimales(x.valeur)).length));
+      const lMax = 616 - Math.max(0, carsVal - 2) * 22;
+      const echelle = lMax / max;
+      const tVal = Math.min(36, Math.max(26, hBarre * 0.8));
+      const tNom = Math.min(28, Math.max(20, pas * 0.5));
+      const carsNom = Math.max(...donnees.map((x) => x.label.length));
+      const tNomFinal = Math.max(17, Math.min(tNom, 280 / (Math.max(1, carsNom) * 0.6)));
+
+      const lignes = [];
+      for (let k = 0; k < 7; k++) {
+        const ligne = $("#gr-l" + (k + 1));
+        if (k >= N) {
+          ligne.style.display = "none";
+          continue;
+        }
+        const d = donnees[k];
+        const largeur = Math.max(6, d.valeur * echelle);
+        ligne.style.top = Math.round(y0 + k * pas + (pas - Math.max(hBarre, 50)) / 2) + "px";
+        ligne.style.height = Math.max(hBarre, 50) + "px";
+        if (d.valeur === max) ligne.classList.add("haut");
+        const nom = ligne.querySelector(".gr-nom");
+        const barre = ligne.querySelector(".gr-barre");
+        const val = ligne.querySelector(".gr-val");
+        nom.textContent = d.label;
+        nom.style.fontSize = tNomFinal + "px";
+        barre.style.width = largeur + "px";
+        barre.style.height = hBarre + "px";
+        barre.style.top = (Math.max(hBarre, 50) - hBarre) / 2 + "px";
+        val.style.left = 324 + largeur + 14 + "px";
+        val.style.fontSize = tVal + "px";
+        lignes.push({ barre, val, valeur: d.valeur, largeur, dVal: decimales(d.valeur) });
+      }
+
+      // Moyenne calculée, « moy. X,Y ».
+      const moyenne = donnees.reduce((s, x) => s + x.valeur, 0) / N;
+      const xMoy = Math.round(324 + moyenne * echelle);
+      $("#gr-moy").style.left = xMoy - 1 + "px";
+      const yBas = Math.round(y0 + N * pas);
+      $("#gr-moy").style.top = Math.round(y0 - 8) + "px";
+      $("#gr-moy").style.height = Math.round(N * pas + 16) + "px";
+      const txtMoy = String(V.moyenne_prefixe) + " " + fr(moyenne, 1);
+      const moyTxt = $("#gr-moy-txt");
+      moyTxt.textContent = txtMoy;
+      const lMoyTxt = txtMoy.length * 29 * 0.6;
+      const gMoy = Math.max(40, Math.min(1040 - lMoyTxt, xMoy - lMoyTxt / 2));
+      moyTxt.style.left = gMoy + "px";
+      moyTxt.style.width = Math.ceil(lMoyTxt + 4) + "px";
+      moyTxt.style.top = Math.min(846, yBas + 12) + "px";
+      // Signature à droite, sauf si l'étiquette de moyenne y est : alors sous les noms, à gauche.
+      const lSigne = String(V.signature).length * 52 * 0.42;
+      if (gMoy + lMoyTxt > 1030 - lSigne - 24) $("#gr-signe").style.left = "60px";
+
+      const tl = gsap.timeline({ paused: true });
+
+      tl.fromTo("#gr-entete", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.25, ease: "power3.out" }, 0);
+      tl.fromTo("#gr-titre", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 0.02);
+      tl.fromTo("#gr-trait", { clipPath: "inset(-50% 100% -50% 0)" }, { clipPath: "inset(-50% 0% -50% 0)", duration: 0.4, ease: "power2.inOut" }, 0.15);
+
+      // Barres 0,05 → ~0,75 s ; l'étiquette suit le bout de la barre et compte jusqu'à la valeur.
+      const decalage = N > 1 ? Math.min(0.0625, 0.3 / (N - 1)) : 0;
+      lignes.forEach(({ barre, val, valeur, largeur, dVal }, k) => {
+        const debut = 0.05 + k * decalage;
+        const duree = 0.4;
+        tl.fromTo(barre, { scaleX: 0 }, { scaleX: 1, duration: duree, ease: "power3.out" }, debut);
+        tl.fromTo(val, { x: -largeur, opacity: 0 }, { x: 0, opacity: 1, duration: duree, ease: "power3.out" }, debut);
+        const o = { v: 0 };
+        val.textContent = fr(0, dVal);
+        tl.to(o, { v: valeur, duration: duree, ease: "power3.out", onUpdate: () => (val.textContent = fr(o.v, dVal)) }, debut);
+      });
+
+      // Ligne de moyenne 0,8 → 1,1 s.
+      tl.fromTo("#gr-moy", { scaleY: 0 }, { scaleY: 1, duration: 0.3, ease: "power2.inOut" }, 0.8);
+      tl.fromTo("#gr-moy-txt", { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.2, ease: "power2.out" }, 0.9);
+
+      // Signature écrite à la main, révélée de gauche à droite.
+      tl.fromTo(
+        "#gr-signe",
+        { clipPath: "inset(0 100% 0 0)", rotation: -5 },
+        { clipPath: "inset(0 0% 0 0)", rotation: -5, duration: 0.35, ease: "power1.inOut" },
+        0.6,
+      );
+
+      // Mouvements continus jusqu'à DUREE : poussée de la carte vidéo, léger zoom du tableau.
+      tl.fromTo("#carte-zoom", { scale: 1 }, { scale: 1 + 0.045 * Math.min(1.6, DUREE / 2.5), duration: DUREE, ease: "sine.inOut" }, 0);
+      tl.fromTo("#gr-contenu", { scale: 1 }, { scale: 1 + 0.018 * Math.min(1.6, DUREE / 2.5), duration: DUREE - 0.7, ease: "sine.inOut" }, 0.7);
+
+      tl.set({}, {}, DUREE);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

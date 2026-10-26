@@ -1,0 +1,25 @@
+{
+  "nom": "checklist",
+  "titre": "Checklist du studio",
+  "description": "Panneau sombre sous le visage : un titre « /monter · ton clip », 2 à 5 étapes qui se cochent une à une avec un compteur, puis « terminé ✓ ».",
+  "besoins": ["clip"],
+  "duree": 2.5,
+  "variables": {
+    "signature": "ninon.ia",
+    "etat_cours": "montage en cours",
+    "etat_fini": "terminé ✓",
+    "commande": "/monter",
+    "titre": "ton clip",
+    "etape1": "Transcription mot à mot",
+    "detail1": "Scribe",
+    "etape2": "Coupes calées sur les mots",
+    "detail2": "±30 ms",
+    "etape3": "Briques graphiques posées",
+    "detail3": "HyperFrames",
+    "etape4": "Musique et bruitages mixés",
+    "detail4": "−14 LUFS",
+    "etape5": "Rendu vertical",
+    "detail5": "1080×1920"
+  },
+  "conseils": "Visage dans la moitié haute du cadre : le panneau occupe y 918–1480 environ (moins avec moins d'étapes). Libellés d'étape courts (30 caractères au plus) et détails de 12 caractères au plus pour tenir sur une ligne. De 2 à 5 étapes : un libellé vide masque l'étape et le compteur s'adapte (1/3 → 3/3). commande vide = titre sans la partie orange. Les coches se répartissent sur les premiers 75 % de la durée, la fin reste posée."
+}

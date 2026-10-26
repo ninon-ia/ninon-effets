@@ -1,0 +1,399 @@
+<!--
+  Effet checklist · scène « checklist » : panneau sombre « /monter · ton clip », 2 à 5 étapes qui se cochent
+  à intervalles réguliers entre 0,15 s et 75 % de DUREE (à 2,5 s : 0,15 · 0,55 · 0,95 · 1,35 · 1,75 s),
+  compteur 1/N → N/N, puis l'état final (« terminé ✓ ») juste après la dernière coche.
+  Une étape au libellé vide est masquée. Textes : variables de index.html, reçues par data-variable-values sur l'hôte.
+  Racine transparente : le clip (index.html) reste visible derrière.
+-->
+<template>
+  <style>
+    @font-face {
+      font-family: "Inter Display";
+      src: url("assets/fonts/InterDisplay-latin.woff2") format("woff2");
+      font-weight: 100 900;
+      font-display: block;
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: "Inter Display";
+      src: url("assets/fonts/InterDisplay-latin-ext.woff2") format("woff2");
+      font-weight: 100 900;
+      font-display: block;
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      --accent: #c2410c;
+      --accent-texte: #e8622a;
+      --accent-clair: #f0a37c;
+      --bord: #3a3a3e;
+      --gris: #8b8a90;
+      --sans: "Inter Display", "Inter", sans-serif;
+      --mono: "JetBrains Mono", monospace;
+      --serif: "EB Garamond", serif;
+      font-family: var(--sans);
+      color: #ffffff;
+    }
+    #ck-panneau {
+      position: absolute;
+      left: 64px;
+      top: 918px;
+      width: 952px;
+      padding: 32px 40px 30px;
+      border-radius: 30px;
+      background: rgba(33, 32, 35, 0.95);
+      border: 1.5px solid var(--bord);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    }
+    #ck-sig {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 36px;
+    }
+    #ck-signature {
+      font-family: var(--serif);
+      font-size: 29px;
+      font-weight: 500;
+      letter-spacing: 0.34em;
+      text-transform: uppercase;
+      color: #d6d4da;
+    }
+    #ck-etat {
+      position: relative;
+      width: 300px;
+      height: 36px;
+      font-family: var(--mono);
+      font-size: 28px;
+      font-weight: 500;
+    }
+    #ck-etat span {
+      position: absolute;
+      right: 0;
+      top: 1px;
+      white-space: nowrap;
+    }
+    #ck-cours {
+      color: #a3a2a8;
+    }
+    #ck-fini {
+      color: var(--accent-clair);
+      opacity: 0;
+    }
+    #ck-tete {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      height: 60px;
+    }
+    #ck-commande {
+      font-size: 46px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+    #ck-commande .slash {
+      font-family: var(--mono);
+      color: var(--accent-texte);
+      letter-spacing: -0.01em;
+    }
+    #ck-commande .point {
+      color: var(--gris);
+      font-weight: 600;
+      padding: 0 8px;
+    }
+    #ck-compteur {
+      display: flex;
+      align-items: center;
+      font-family: var(--mono);
+      font-size: 44px;
+      font-weight: 700;
+    }
+    #ck-rouleau {
+      position: relative;
+      width: 30px;
+      height: 56px;
+      overflow: hidden;
+    }
+    #ck-chiffres {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 30px;
+    }
+    #ck-chiffres span {
+      display: block;
+      height: 56px;
+      line-height: 56px;
+      text-align: center;
+    }
+    #ck-sur {
+      color: var(--gris);
+      line-height: 56px;
+    }
+    #ck-segments {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .ck-seg {
+      flex: 1;
+      height: 8px;
+      border-radius: 4px;
+      background: #3a393e;
+      overflow: hidden;
+    }
+    .ck-seg i {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: var(--accent);
+      transform-origin: 0 50%;
+    }
+    #ck-liste {
+      margin-top: 16px;
+    }
+    .ck-ligne {
+      display: flex;
+      align-items: center;
+      height: 70px;
+      border-top: 1.5px solid #333236;
+    }
+    .ck-ligne:first-child {
+      border-top: none;
+    }
+    .ck-boite {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      flex: none;
+      border-radius: 12px;
+      border: 2px solid #4a4a4f;
+    }
+    .ck-plein {
+      position: absolute;
+      left: -2px;
+      top: -2px;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: var(--accent);
+      opacity: 0;
+    }
+    .ck-boite svg {
+      position: absolute;
+      left: -2px;
+      top: -2px;
+      width: 42px;
+      height: 42px;
+    }
+    .ck-coche path {
+      fill: none;
+      stroke: #fff;
+      stroke-width: 4.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+    }
+    .ck-rond {
+      opacity: 0;
+    }
+    .ck-rond circle {
+      fill: none;
+      stroke: var(--accent-texte);
+      stroke-width: 3.4;
+      stroke-linecap: round;
+      stroke-dasharray: 26 100;
+    }
+    .ck-lib {
+      margin-left: 26px;
+      font-size: 38px;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+      white-space: nowrap;
+      opacity: 0.45;
+    }
+    .ck-det {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 28px;
+      font-weight: 500;
+      color: #a3a2a8;
+      white-space: nowrap;
+      opacity: 0.6;
+    }
+  </style>
+
+  <div id="root" data-composition-id="checklist" data-width="1080" data-height="1920">
+    <div id="ck-panneau">
+      <div id="ck-sig">
+        <div id="ck-signature" data-var-text="signature">ninon.ia</div>
+        <div id="ck-etat" data-layout-allow-overlap>
+          <span id="ck-cours" data-var-text="etat_cours">montage en cours</span>
+          <span id="ck-fini" data-var-text="etat_fini">terminé ✓</span>
+        </div>
+      </div>
+
+      <div id="ck-tete">
+        <div id="ck-commande"><span class="slash" id="ck-slash" data-var-text="commande">/monter</span><span class="point" id="ck-point">·</span><span id="ck-titre" data-var-text="titre">ton clip</span></div>
+        <div id="ck-compteur">
+          <div id="ck-rouleau" data-layout-allow-overflow>
+            <div id="ck-chiffres">
+              <span data-layout-allow-occlusion>1</span><span data-layout-allow-occlusion>2</span><span data-layout-allow-occlusion>3</span><span data-layout-allow-occlusion>4</span><span data-layout-allow-occlusion>5</span>
+            </div>
+          </div>
+          <span id="ck-sur">/5</span>
+        </div>
+      </div>
+
+      <div id="ck-segments">
+        <div class="ck-seg" id="ck-segw1"><i id="ck-seg1"></i></div>
+        <div class="ck-seg" id="ck-segw2"><i id="ck-seg2"></i></div>
+        <div class="ck-seg" id="ck-segw3"><i id="ck-seg3"></i></div>
+        <div class="ck-seg" id="ck-segw4"><i id="ck-seg4"></i></div>
+        <div class="ck-seg" id="ck-segw5"><i id="ck-seg5"></i></div>
+      </div>
+
+      <div id="ck-liste">
+        <div class="ck-ligne" id="ck-l1">
+          <div class="ck-boite">
+            <svg class="ck-rond" id="ck-rond1" viewBox="0 0 42 42"><circle cx="21" cy="21" r="12" /></svg>
+            <div class="ck-plein" id="ck-plein1"></div>
+            <svg class="ck-coche" viewBox="0 0 42 42"><path id="ck-coche1" pathLength="1" d="M12 21.5 L18.5 28 L30.5 15" /></svg>
+          </div>
+          <div class="ck-lib" id="ck-lib1" data-var-text="etape1">Transcription mot à mot</div>
+          <div class="ck-det" id="ck-det1" data-var-text="detail1">Scribe</div>
+        </div>
+        <div class="ck-ligne" id="ck-l2">
+          <div class="ck-boite">
+            <svg class="ck-rond" id="ck-rond2" viewBox="0 0 42 42"><circle cx="21" cy="21" r="12" /></svg>
+            <div class="ck-plein" id="ck-plein2"></div>
+            <svg class="ck-coche" viewBox="0 0 42 42"><path id="ck-coche2" pathLength="1" d="M12 21.5 L18.5 28 L30.5 15" /></svg>
+          </div>
+          <div class="ck-lib" id="ck-lib2" data-var-text="etape2">Coupes calées sur les mots</div>
+          <div class="ck-det" id="ck-det2" data-var-text="detail2">±30 ms</div>
+        </div>
+        <div class="ck-ligne" id="ck-l3">
+          <div class="ck-boite">
+            <svg class="ck-rond" id="ck-rond3" viewBox="0 0 42 42"><circle cx="21" cy="21" r="12" /></svg>
+            <div class="ck-plein" id="ck-plein3"></div>
+            <svg class="ck-coche" viewBox="0 0 42 42"><path id="ck-coche3" pathLength="1" d="M12 21.5 L18.5 28 L30.5 15" /></svg>
+          </div>
+          <div class="ck-lib" id="ck-lib3" data-var-text="etape3">Briques graphiques posées</div>
+          <div class="ck-det" id="ck-det3" data-var-text="detail3">HyperFrames</div>
+        </div>
+        <div class="ck-ligne" id="ck-l4">
+          <div class="ck-boite">
+            <svg class="ck-rond" id="ck-rond4" viewBox="0 0 42 42"><circle cx="21" cy="21" r="12" /></svg>
+            <div class="ck-plein" id="ck-plein4"></div>
+            <svg class="ck-coche" viewBox="0 0 42 42"><path id="ck-coche4" pathLength="1" d="M12 21.5 L18.5 28 L30.5 15" /></svg>
+          </div>
+          <div class="ck-lib" id="ck-lib4" data-var-text="etape4">Musique et bruitages mixés</div>
+          <div class="ck-det" id="ck-det4" data-var-text="detail4">−14 LUFS</div>
+        </div>
+        <div class="ck-ligne" id="ck-l5">
+          <div class="ck-boite">
+            <svg class="ck-rond" id="ck-rond5" viewBox="0 0 42 42"><circle cx="21" cy="21" r="12" /></svg>
+            <div class="ck-plein" id="ck-plein5"></div>
+            <svg class="ck-coche" viewBox="0 0 42 42"><path id="ck-coche5" pathLength="1" d="M12 21.5 L18.5 28 L30.5 15" /></svg>
+          </div>
+          <div class="ck-lib" id="ck-lib5" data-var-text="etape5">Rendu vertical</div>
+          <div class="ck-det" id="ck-det5" data-var-text="detail5">1080×1920</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // Durée et textes : lus sur la racine de la scène (son hôte, qui porte data-duration et data-variable-values).
+      const racine =
+        document.querySelector('[data-composition-id="checklist"][data-duration]') ||
+        document.querySelector("[data-composition-id][data-duration]");
+      const DUREE = parseFloat(racine.dataset.duration);
+      let V = {};
+      try {
+        V = JSON.parse(racine.getAttribute("data-variable-values") || "{}");
+      } catch (e) {
+        V = {};
+      }
+      const hf = window.__hyperframes;
+      if (!Object.keys(V).length && hf && hf.getVariables) V = hf.getVariables();
+      const texte = (id, el) => String(V[id] !== undefined ? V[id] : el.textContent).trim();
+
+      // Étapes actives : libellé non vide (2 à 5). Les autres lignes et leurs segments disparaissent.
+      const actives = [];
+      for (let i = 1; i <= 5; i++) {
+        if (texte("etape" + i, document.getElementById("ck-lib" + i))) actives.push(i);
+        else {
+          document.getElementById("ck-l" + i).style.display = "none";
+          document.getElementById("ck-segw" + i).style.display = "none";
+        }
+      }
+      if (!actives.length) actives.push(1);
+      const N = actives.length;
+      document.getElementById("ck-l" + actives[0]).style.borderTop = "none";
+      document.getElementById("ck-sur").textContent = "/" + N;
+      if (!texte("commande", document.getElementById("ck-slash"))) {
+        document.getElementById("ck-slash").style.display = "none";
+        document.getElementById("ck-point").style.display = "none";
+      }
+
+      // Coches réparties sur les premiers 75 % de DUREE.
+      const PREMIERE = 0.15;
+      const DERNIERE = 0.75 * DUREE - 0.125;
+      const PAS = N > 1 ? (DERNIERE - PREMIERE) / (N - 1) : 0;
+      const TICKS = actives.map((_, k) => PREMIERE + k * PAS);
+      const FIN = TICKS[N - 1] + 0.15;
+      const lignes = actives.map((i) => "#ck-l" + i);
+      const i0 = actives[0];
+
+      const tl = gsap.timeline({ paused: true });
+
+      // Entrée : le panneau monte et se pose, les lignes suivent en cascade.
+      tl.fromTo("#ck-panneau", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.34, ease: "power3.out" }, 0);
+      tl.fromTo(lignes, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out", stagger: 0.035 }, 0.04);
+      tl.fromTo(".ck-seg i", { scaleX: 0 }, { scaleX: 0, duration: 0.01 }, 0);
+      tl.fromTo("#ck-chiffres", { y: 0 }, { y: 0, duration: 0.01 }, 0);
+
+      // La première étape est « en cours » dès l'entrée.
+      tl.fromTo("#ck-lib" + i0, { opacity: 0.45 }, { opacity: 0.82, duration: 0.12, ease: "power2.out" }, 0);
+      tl.fromTo("#ck-rond" + i0, { opacity: 0 }, { opacity: 1, duration: 0.06, ease: "none" }, 0.01);
+
+      // L'arc tourne à vitesse constante (600°/s) tant qu'une étape est en cours.
+      tl.fromTo(".ck-rond circle", { rotation: 0 }, { rotation: 600 * DUREE, duration: DUREE, ease: "none", svgOrigin: "21 21" }, 0);
+
+      TICKS.forEach((t, k) => {
+        const i = actives[k];
+        tl.to("#ck-rond" + i, { opacity: 0, duration: 0.06, ease: "none" }, t);
+        tl.fromTo("#ck-plein" + i, { opacity: 0, scale: 0.55 }, { opacity: 1, scale: 1, duration: 0.24, ease: "expo.out" }, t);
+        tl.fromTo("#ck-coche" + i, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.2, ease: "power2.out" }, t + 0.05);
+        tl.to("#ck-lib" + i, { opacity: 1, duration: 0.18, ease: "power2.out" }, t);
+        tl.fromTo(
+          "#ck-det" + i,
+          { opacity: 0.6, color: "#a3a2a8" },
+          { opacity: 1, color: "#f0a37c", duration: 0.22, ease: "power2.out" },
+          t + 0.04,
+        );
+        tl.to("#ck-seg" + i, { scaleX: 1, duration: 0.3, ease: "power3.out" }, t);
+        if (k > 0) tl.to("#ck-chiffres", { y: -k * 56, duration: 0.26, ease: "power3.out" }, t);
+        if (k < N - 1) {
+          const suivante = actives[k + 1];
+          tl.to("#ck-lib" + suivante, { opacity: 0.82, duration: 0.16, ease: "power2.out" }, t + 0.08);
+          tl.to("#ck-rond" + suivante, { opacity: 1, duration: 0.06, ease: "none" }, t + 0.08);
+        }
+      });
+
+      // Fin : l'état bascule, le bord du panneau prend l'accent.
+      tl.to("#ck-cours", { opacity: 0, filter: "blur(4px)", duration: 0.14, ease: "power2.in" }, FIN);
+      tl.fromTo("#ck-fini", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power4.out" }, FIN + 0.08);
+      tl.to("#ck-panneau", { borderColor: "rgba(194,65,12,0.8)", duration: 0.4, ease: "power2.inOut" }, FIN);
+      tl.set({}, {}, DUREE);
+
+      window.__timelines["checklist"] = tl;
+    })();
+  </script>
+</template>

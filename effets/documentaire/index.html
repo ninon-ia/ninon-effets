@@ -1,0 +1,471 @@
+<!doctype html>
+<!--
+  « documentaire » — effet de la bibliothèque (vient de V2, reel démo studio, 26/10/2026)
+  1080×1920, 30 i/s, durée = data-duration de la racine (2,5 s par défaut), muet. Affiche de documentaire :
+  fond quasi noir chaud + lueur orange, anneau orange tracé derrière la tête (0,05–0,4 s),
+  détourage N&B (assets/media/detoure-nb.webm, alpha VP9) décalé à gauche, bords droit et bas fondus au noir
+  par masques CSS génériques (aucun nettoyage propre à un clip), titre League Gothic 3 lignes à droite
+  (0,1–0,45 s, taille ajustée pour tenir dans 580 px), étiquette mono, bandeau nom + pseudo,
+  bouton cliqué par un curseur à 0,95 s. Poussée lente 1 → 1,03 et dérives étalées sur DUREE, grain sauté à 15 i/s.
+  Textes : variables (data-composition-variables sur <html>).
+-->
+<html lang="fr" data-resolution="portrait" data-composition-variables='[{"id": "etiquette", "type": "string", "label": "Étiquette du haut (le « · » passe en orange)", "default": "DÉCRYPTAGE DE L’IA · NINON.IA"}, {"id": "ligne1", "type": "string", "label": "Titre, ligne 1", "default": "TA TÉLÉ"}, {"id": "ligne2", "type": "string", "label": "Titre, ligne 2", "default": "T’ESPIONNE."}, {"id": "ligne3", "type": "string", "label": "Titre, ligne 3", "default": "REPRENDS-LA."}, {"id": "ligne_orange", "type": "number", "label": "Ligne du titre en orange (1 à 3)", "default": 2, "min": 1, "max": 3, "step": 1}, {"id": "nom", "type": "string", "label": "Bandeau nom", "default": "NINON"}, {"id": "pseudo", "type": "string", "label": "Pseudo sous le bandeau", "default": "@ninon.ia_officiel"}, {"id": "bouton_avant", "type": "string", "label": "Bouton avant le clic", "default": "Suivre"}, {"id": "bouton_apres", "type": "string", "label": "Bouton après le clic (suivi d’une coche)", "default": "Abonnée"}, {"id": "signature", "type": "string", "label": "Signature manuscrite", "default": "par Ninon"}]'>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Newsreader";
+        font-style: italic;
+        src: url("assets/fonts/Newsreader-Italic-latin.woff2") format("woff2");
+        font-weight: 200 800;
+        font-display: block;
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: "Newsreader";
+        font-style: italic;
+        src: url("assets/fonts/Newsreader-Italic-latin-ext.woff2") format("woff2");
+        font-weight: 200 800;
+        font-display: block;
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: "Caveat";
+        src: url("assets/fonts/Caveat-latin.woff2") format("woff2");
+        font-weight: 400 700;
+        font-display: block;
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: "Caveat";
+        src: url("assets/fonts/Caveat-latin-ext.woff2") format("woff2");
+        font-weight: 400 700;
+        font-display: block;
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #120c09;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #120c09;
+        --accent: #c2410c;
+        --accent-vif: #e0662f;
+        --accent-clair: #f08a4b;
+        --creme: #efe7de;
+        --gris: #a39a93;
+      }
+      /* Tout ce qui pousse (1 → 1,03) */
+      #poster {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 42%;
+      }
+      #fond {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 620px 760px at 330px 520px, rgba(194, 65, 12, 0.62) 0%, rgba(150, 46, 10, 0.36) 42%, rgba(60, 20, 6, 0) 78%),
+          radial-gradient(ellipse 900px 900px at 820px 1500px, rgba(120, 38, 8, 0.22) 0%, rgba(0, 0, 0, 0) 70%),
+          linear-gradient(180deg, #1a100b 0%, #120c09 55%, #0c0806 100%);
+      }
+      #lueur {
+        position: absolute;
+        left: -170px;
+        top: 20px;
+        width: 1000px;
+        height: 1000px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 50%, rgba(240, 120, 60, 0.42) 0%, rgba(194, 65, 12, 0.18) 38%, rgba(194, 65, 12, 0) 68%);
+      }
+      #disque {
+        position: absolute;
+        left: -90px;
+        top: 80px;
+        width: 840px;
+        height: 840px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 46%, rgba(224, 102, 47, 0.34) 0%, rgba(194, 65, 12, 0.22) 55%, rgba(194, 65, 12, 0.08) 100%);
+      }
+      #anneaux {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 1920px;
+        overflow: visible;
+      }
+      #sujet {
+        position: absolute;
+        left: -217px;
+        top: -8px;
+        width: 1134px;
+        height: 2016px;
+        /* Masques génériques (en px de la vidéo affichée) : la bordure droite (bras coupé par le cadre, restes
+           de décor sur les côtés) et le bas fondent dans le noir de l'affiche. Aucun nettoyage propre à un clip. */
+        -webkit-mask-image:
+          linear-gradient(90deg, #000 0, #000 880px, transparent 1080px),
+          linear-gradient(180deg, #000 0, #000 1040px, transparent 1260px);
+        -webkit-mask-composite: source-in;
+        mask-image:
+          linear-gradient(90deg, #000 0, #000 880px, transparent 1080px),
+          linear-gradient(180deg, #000 0, #000 1040px, transparent 1260px);
+        mask-composite: intersect;
+        mask-repeat: no-repeat;
+        mask-size: 100% 100%;
+      }
+      #sujet-video {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1134px;
+        height: 2016px;
+        object-fit: fill;
+      }
+      #voile-bas {
+        position: absolute;
+        left: 0;
+        top: 1000px;
+        width: 1080px;
+        height: 920px;
+        background: linear-gradient(180deg, rgba(18, 12, 9, 0) 0%, rgba(18, 12, 9, 0.55) 34%, rgba(14, 9, 7, 0.9) 62%, rgba(12, 8, 6, 0.96) 100%);
+      }
+      #etiquette {
+        position: absolute;
+        right: 64px;
+        top: 232px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-family: "IBM Plex Mono", monospace;
+        font-weight: 600;
+        font-size: 28px;
+        letter-spacing: 0.26em;
+        color: var(--creme);
+        white-space: nowrap;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+      }
+      #etiquette-trait {
+        width: 54px;
+        height: 3px;
+        background: var(--accent-vif);
+      }
+      #etiquette b {
+        color: var(--accent-clair);
+        font-weight: 600;
+      }
+      #titre {
+        position: absolute;
+        right: 60px;
+        top: 292px;
+        text-align: right;
+        font-family: "League Gothic", "Oswald", sans-serif;
+        font-size: 142px;
+        line-height: 0.9;
+        letter-spacing: 0.005em;
+        color: #ffffff;
+        text-transform: uppercase;
+      }
+      .masque {
+        display: block;
+        overflow: hidden;
+        padding: 6px 4px 0 30px;
+        margin-top: -6px;
+      }
+      .ligne {
+        display: block;
+        white-space: nowrap;
+        text-shadow: 0 8px 34px rgba(0, 0, 0, 0.55);
+      }
+      .ligne.orange {
+        color: var(--accent-vif);
+      }
+      #signature {
+        white-space: nowrap;
+        position: absolute;
+        right: 70px;
+        top: 694px;
+        font-family: "Caveat", cursive;
+        font-weight: 700;
+        font-size: 56px;
+        color: var(--accent-clair);
+        text-shadow: 0 3px 16px rgba(0, 0, 0, 0.6);
+      }
+      #bandeau-zone {
+        position: absolute;
+        left: 64px;
+        top: 1322px;
+      }
+      #bandeau {
+        position: relative;
+        display: inline-block;
+        padding: 10px 30px 4px;
+      }
+      #bandeau-fond {
+        position: absolute;
+        inset: 0;
+        background: var(--accent);
+        transform-origin: 0 50%;
+      }
+      #bandeau-nom {
+        white-space: nowrap;
+        position: relative;
+        display: block;
+        font-family: "League Gothic", "Oswald", sans-serif;
+        font-size: 104px;
+        line-height: 1;
+        letter-spacing: 0.06em;
+        color: #ffffff;
+      }
+      #pseudo {
+        white-space: nowrap;
+        width: max-content;
+        margin-top: 12px;
+        font-family: "Newsreader", serif;
+        font-style: italic;
+        font-weight: 500;
+        font-size: 40px;
+        color: var(--gris);
+      }
+      #bouton {
+        position: absolute;
+        right: 64px;
+        top: 1338px;
+        width: 318px;
+        height: 96px;
+      }
+      #bouton-corps {
+        position: absolute;
+        inset: 0;
+        border-radius: 48px;
+        background: var(--accent);
+        box-shadow: 0 14px 40px rgba(194, 65, 12, 0.35);
+      }
+      .bouton-texte {
+        white-space: nowrap;
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        font-family: "Inter", sans-serif;
+        font-weight: 700;
+        font-size: 40px;
+        color: #ffffff;
+      }
+      #etat-abonnee {
+        opacity: 0;
+        color: #f2eeea;
+      }
+      #onde {
+        position: absolute;
+        left: 159px;
+        top: 48px;
+        width: 40px;
+        height: 40px;
+        margin: -20px 0 0 -20px;
+        border-radius: 50%;
+        border: 4px solid rgba(255, 255, 255, 0.85);
+        opacity: 0;
+      }
+      #curseur {
+        position: absolute;
+        left: 852px;
+        top: 1390px;
+        width: 58px;
+        height: 70px;
+      }
+      #grain {
+        position: absolute;
+        left: -100px;
+        top: -160px;
+        width: 1280px;
+        height: 2240px;
+        opacity: 0.13;
+        mix-blend-mode: overlay;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2.5" data-width="1080" data-height="1920">
+      <div id="poster">
+        <div id="fond"></div>
+        <div id="lueur"></div>
+        <div id="disque"></div>
+        <svg id="anneaux" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+          <circle id="anneau-fin" cx="330" cy="500" r="452" fill="none" stroke="#f08a4b" stroke-width="2" stroke-dasharray="3 16" opacity="0.45" />
+          <circle id="anneau" cx="330" cy="500" r="420" fill="none" stroke="#e0662f" stroke-width="7" transform="rotate(-90 330 500)" />
+          <g id="tete-anneau">
+            <circle cx="330" cy="80" r="11" fill="#f08a4b" />
+          </g>
+        </svg>
+        <div id="sujet">
+          <video
+            id="sujet-video"
+            class="clip"
+            src="assets/media/detoure-nb.webm"
+            data-start="0"
+            data-duration="2.5"
+            data-track-index="1"
+            data-layout-allow-occlusion
+            muted
+            playsinline
+          ></video>
+        </div>
+        <div id="voile-bas"></div>
+
+        <div id="etiquette"><span id="etiquette-trait"></span><span id="etiquette-texte">DÉCRYPTAGE DE L’IA <b>·</b> NINON.IA</span></div>
+
+        <div id="titre">
+          <span class="masque"><span class="ligne" id="ligne-1" data-var-text="ligne1">TA TÉLÉ</span></span>
+          <span class="masque"><span class="ligne orange" id="ligne-2" data-var-text="ligne2">T’ESPIONNE.</span></span>
+          <span class="masque"><span class="ligne" id="ligne-3" data-var-text="ligne3">REPRENDS-LA.</span></span>
+        </div>
+        <div id="signature" data-var-text="signature">par Ninon</div>
+
+        <div id="bandeau-zone">
+          <div id="bandeau"><span id="bandeau-fond"></span><span id="bandeau-nom" data-var-text="nom">NINON</span></div>
+          <div id="pseudo" data-var-text="pseudo">@ninon.ia_officiel</div>
+        </div>
+
+        <div id="bouton">
+          <div id="bouton-corps"></div>
+          <div class="bouton-texte" id="etat-suivre"><span id="suivre-texte" data-var-text="bouton_avant">Suivre</span></div>
+          <div class="bouton-texte" id="etat-abonnee">
+            <span id="abonnee-texte" data-var-text="bouton_apres">Abonnée</span>
+            <svg width="34" height="34" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 18 L14 26 L28 9" fill="none" stroke="#f2eeea" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <div id="onde"></div>
+        </div>
+
+        <svg id="curseur" viewBox="0 0 58 70" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 4 L5 56 L18 44 L27 64 L36 60 L27 41 L45 41 Z" fill="#ffffff" stroke="#1a110c" stroke-width="4" stroke-linejoin="round" />
+        </svg>
+      </div>
+
+      <img id="grain" src="assets/img/grain.png" alt="" />
+    </div>
+    <script>
+      (function () {
+        const DUREE = parseFloat(document.querySelector("[data-composition-id]").dataset.duration);
+        const tl = gsap.timeline({ paused: true });
+        const CIRC = 2 * Math.PI * 420;
+
+        // --- Textes (variables) : étiquette avec « · » orange, ligne orange du titre
+        const hf = window.__hyperframes;
+        const V = (hf && hf.getVariables && hf.getVariables()) || {};
+        if (typeof V.etiquette === "string") {
+          const el = document.getElementById("etiquette-texte");
+          el.textContent = "";
+          V.etiquette.split("·").forEach((morceau, i) => {
+            if (i > 0) {
+              const b = document.createElement("b");
+              b.textContent = "·";
+              el.appendChild(b);
+            }
+            el.appendChild(document.createTextNode(morceau));
+          });
+        }
+        const orange = Math.min(3, Math.max(1, Math.round(Number(V.ligne_orange) || 2)));
+        [1, 2, 3].forEach((n) => document.getElementById("ligne-" + n).classList.toggle("orange", n === orange));
+
+        // --- Ajustement des tailles : chaque bloc garde sa taille de démo et rétrécit seulement si le texte
+        // dépasse sa largeur utile (titre ≤ 580 px pour ne pas couvrir le visage). Mesuré à chaque image :
+        // déterministe, et juste dès que les polices sont chargées.
+        const AJUSTS = [
+          { el: document.getElementById("titre"), base: 142, max: 580, mesure: () => document.getElementById("titre").scrollWidth - 34 },
+          { el: document.getElementById("etiquette"), base: 28, max: 900 },
+          { el: document.getElementById("signature"), base: 56, max: 520 },
+          { el: document.getElementById("bandeau-nom"), base: 104, max: 520 },
+          { el: document.getElementById("pseudo"), base: 40, max: 560 },
+          { el: document.getElementById("suivre-texte"), base: 40, max: 270 },
+          { el: document.getElementById("abonnee-texte"), base: 40, max: 226 },
+        ];
+        function ajuster() {
+          for (const a of AJUSTS) {
+            a.el.style.fontSize = a.base + "px";
+            const w = a.mesure ? a.mesure() : a.el.scrollWidth;
+            if (w > a.max) a.el.style.fontSize = Math.floor((a.base * a.max) / w) + "px";
+          }
+        }
+        ajuster();
+        if (document.fonts) document.fonts.ready.then(ajuster);
+        const horloge = { t: 0 };
+        tl.fromTo(horloge, { t: 0 }, { t: 1, duration: DUREE, ease: "none", immediateRender: true, onUpdate: ajuster }, 0);
+
+        // --- Mouvement continu (0 → DUREE)
+        tl.fromTo("#poster", { scale: 1 }, { scale: 1.03, duration: DUREE, ease: "none" }, 0);
+        tl.fromTo("#sujet", { x: 0, y: 0 }, { x: -14, y: -6, duration: DUREE, ease: "none" }, 0);
+        tl.fromTo("#lueur", { opacity: 0.7, scale: 0.96 }, { opacity: 1, scale: 1.06, duration: DUREE, ease: "sine.inOut" }, 0);
+        tl.fromTo("#anneau-fin", { rotation: 0, svgOrigin: "330 500" }, { rotation: -24, svgOrigin: "330 500", duration: DUREE, ease: "none" }, 0);
+
+        // --- Anneau + disque (0,05 → 0,4 s), puis la tête de tracé continue lentement jusqu'à DUREE
+        tl.fromTo("#anneau", { strokeDasharray: CIRC, strokeDashoffset: CIRC }, { strokeDashoffset: 0, duration: 0.35, ease: "power2.out" }, 0.05);
+        tl.fromTo("#tete-anneau", { rotation: 0, svgOrigin: "330 500", opacity: 1 }, { rotation: 360, svgOrigin: "330 500", duration: 0.35, ease: "power2.out" }, 0.05);
+        tl.to("#tete-anneau", { rotation: 412, svgOrigin: "330 500", duration: DUREE - 0.4, ease: "none" }, 0.4);
+        tl.fromTo("#disque", { opacity: 0, scale: 0.82 }, { opacity: 1, scale: 1, duration: 0.35, ease: "power3.out" }, 0.05);
+
+        // --- Étiquette
+        tl.fromTo("#etiquette", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.24, ease: "power2.out" }, 0.08);
+        tl.fromTo("#etiquette-trait", { scaleX: 0, transformOrigin: "100% 50%" }, { scaleX: 1, duration: 0.26, ease: "power3.out" }, 0.12);
+
+        // --- Titre, ligne par ligne (0,1 → 0,45 s)
+        tl.fromTo("#ligne-1", { yPercent: 135 }, { yPercent: 0, duration: 0.15, ease: "power3.out" }, 0.1);
+        tl.fromTo("#ligne-2", { yPercent: 135 }, { yPercent: 0, duration: 0.15, ease: "power3.out" }, 0.2);
+        tl.fromTo("#ligne-3", { yPercent: 135 }, { yPercent: 0, duration: 0.15, ease: "power3.out" }, 0.3);
+        tl.fromTo("#titre", { x: 0 }, { x: -10, duration: DUREE - 0.4, ease: "none" }, 0.4);
+        tl.fromTo("#signature", { opacity: 0, y: 14, rotation: -5 }, { opacity: 1, y: 0, rotation: -5, duration: 0.3, ease: "power2.out" }, 0.48);
+
+        // --- Bandeau nom + pseudo
+        tl.fromTo("#bandeau-fond", { scaleX: 0 }, { scaleX: 1, duration: 0.2, ease: "power3.out" }, 0.16);
+        tl.fromTo("#bandeau-nom", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.18, ease: "power3.out" }, 0.22);
+        tl.fromTo("#pseudo", { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.2, ease: "power2.out" }, 0.28);
+
+        // --- Bouton
+        tl.fromTo("#bouton", { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 0.2, ease: "back.out(1.6)" }, 0.24);
+
+        // --- Curseur : glisse, clique à 0,95 s, repart et disparaît vers 2,15 s
+        tl.fromTo("#curseur", { opacity: 0, x: 170, y: 300 }, { opacity: 1, x: 0, y: 0, duration: 0.42, ease: "power2.inOut" }, 0.46);
+        tl.to("#curseur", { scale: 0.82, transformOrigin: "5px 4px", duration: 0.05, ease: "power2.in" }, 0.9);
+        tl.to("#curseur", { scale: 1, transformOrigin: "5px 4px", duration: 0.1, ease: "power2.out" }, 0.96);
+        tl.to("#bouton", { scale: 0.95, duration: 0.05, ease: "power2.in" }, 0.9);
+        tl.to("#bouton", { scale: 1, duration: 0.22, ease: "back.out(2.2)" }, 0.96);
+        tl.to("#bouton-corps", { backgroundColor: "#3a3330", boxShadow: "0 14px 40px rgba(0, 0, 0, 0.35)", duration: 0.12, ease: "power1.out" }, 0.95);
+        tl.to("#etat-suivre", { opacity: 0, y: -18, duration: 0.06, ease: "power2.in" }, 0.95);
+        tl.fromTo("#etat-abonnee", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.14, ease: "power2.out" }, 1.0);
+        tl.fromTo("#onde", { opacity: 0.9, scale: 0.4 }, { opacity: 0, scale: 4.2, duration: 0.42, ease: "power2.out" }, 0.95);
+        tl.to("#curseur", { x: 60, y: 70, duration: 0.9, ease: "sine.inOut" }, 1.2);
+        tl.to("#curseur", { opacity: 0, duration: 0.3, ease: "power1.in" }, 1.85);
+
+        // --- Grain : image fixe déplacée à 15 i/s jusqu'à DUREE (positions pseudo-aléatoires à graine fixe)
+        let s = 20261026;
+        const rnd = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
+        for (let i = 0; i <= Math.ceil(DUREE * 15); i++) {
+          tl.set("#grain", { x: Math.round(rnd() * 180 - 90), y: Math.round(rnd() * 300 - 150) }, i / 15);
+        }
+
+        tl.set({}, {}, DUREE);
+        window.__timelines = window.__timelines || {};
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

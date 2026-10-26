@@ -1,0 +1,16 @@
+{
+  "nom": "neon",
+  "titre": "Enseigne néon",
+  "description": "Un mot écrit à la main en néon orange s'allume en grésillant derrière la tête de la personne (le haut de sa tête passe devant le mot), avec une petite ligne mono allumée en dessous et une lueur orange sur le mur sombre.",
+  "besoins": [
+    "clip",
+    "detoure"
+  ],
+  "duree": 2.5,
+  "variables": {
+    "mot": "rébellion",
+    "signature": "ninon.ia",
+    "decalage": 390
+  },
+  "conseils": "Plan poitrine, visage centré, cheveux bien détachés du fond. Le clip et le détourage sont descendus ensemble de « decalage » px (390 par défaut) pour que le haut de la tête passe devant le bas du mot (y 630) ; le haut libéré devient un mur sombre. Si le haut de la tête cache tout le mot (visage haut dans le cadre), augmenter « decalage » (par ex. 450 à 550) ; si la tête ne touche plus le mot (visage bas), le diminuer (par ex. 250 à 330). Mot de 4 à 14 caractères : la taille baisse toute seule pour tenir dans 940 px, le bas du mot reste au même endroit. Mot court et en minuscules de préférence (écriture manuscrite). La petite ligne mono est calée à droite sous le mot, derrière la personne : la garder courte (8 à 10 caractères), sinon son début passe derrière les cheveux. Exemple : sur un plan serré au visage haut (rush « énervée »), « decalage » 430 laisse le mot lisible avec la tête devant son bas (390 marche aussi, la tête cache un peu plus)."
+}

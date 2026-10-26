@@ -1,0 +1,23 @@
+{
+  "nom": "documentaire",
+  "titre": "Affiche documentaire",
+  "description": "Affiche de documentaire sombre : la personne détourée en noir et blanc à gauche, un anneau orange tracé derrière sa tête, un titre en trois lignes à droite (une ligne en orange), un bandeau nom + pseudo et un bouton « Suivre » cliqué par un curseur qui devient « Abonnée ✓ ».",
+  "besoins": [
+    "clip",
+    "detoure-nb"
+  ],
+  "duree": 2.5,
+  "variables": {
+    "etiquette": "DÉCRYPTAGE DE L’IA · NINON.IA",
+    "ligne1": "TA TÉLÉ",
+    "ligne2": "T’ESPIONNE.",
+    "ligne3": "REPRENDS-LA.",
+    "ligne_orange": 2,
+    "nom": "NINON",
+    "pseudo": "@ninon.ia_officiel",
+    "bouton_avant": "Suivre",
+    "bouton_apres": "Abonnée",
+    "signature": "par Ninon"
+  },
+  "conseils": "Plan poitrine (pas trop serré), visage centré ou un peu à gauche, sur un fond qui se détache bien (le détourage fait tout le travail). La personne est décalée vers la gauche et ses bords droit et bas fondent dans le noir : un geste de la main à droite du cadre disparaît. Titre court : 3 lignes de 6 à 13 caractères chacune (au-delà, la taille baisse pour rester dans 580 px et ne pas couvrir le visage). « ligne_orange » choisit la ligne colorée (1, 2 ou 3). Dans l'étiquette, le « · » passe en orange. Le bouton change d'état à 0,95 s, garder des mots courts (« Suivre » / « Abonnée », une coche est ajoutée). Sur un plan serré (visage qui prend plus de 40 % de la largeur), la 3e ligne arrive à hauteur des yeux et frôle la joue droite : préférer alors des lignes de 11 caractères au plus."
+}

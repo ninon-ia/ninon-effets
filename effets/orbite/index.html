@@ -1,0 +1,236 @@
+<!doctype html>
+<!--
+  Effet « orbite » (bibliothèque effets/, d'après V3 du reel démo studio, 26/10/2026)
+  1080×1920, 30 i/s, durée DUREE (défaut 2,5 s, réécrite par outils/rendre-effet.sh), muet.
+  Profondeur : plaque (assets/media/clip.mp4, plein cadre) → demi-orbite arrière + cartes « loin » → détourage
+  (assets/media/detoure.webm, alpha, aligné sur le clip) → demi-orbite avant + cartes « près ».
+  7 cartes (assets/media/carte1…7.mp4) tournent sur une ellipse inclinée centrée sur la poitrine (centre_y) :
+  120° étalés sur DUREE, éventail depuis le centre entre 0,05 et 0,4 s.
+  Crédits : variables credit1…credit7 ; vide = pas de ligne de crédit sur la carte.
+  Positions calculées uniquement à partir du temps de la timeline (proxy GSAP + onUpdate), aucun aléa.
+-->
+<html
+  lang="fr"
+  data-resolution="portrait"
+  data-composition-variables='[{"id": "credit1", "type": "string", "label": "Crédit de la carte 1 (vide = aucun)", "default": ""}, {"id": "credit2", "type": "string", "label": "Crédit de la carte 2 (vide = aucun)", "default": ""}, {"id": "credit3", "type": "string", "label": "Crédit de la carte 3 (vide = aucun)", "default": ""}, {"id": "credit4", "type": "string", "label": "Crédit de la carte 4 (vide = aucun)", "default": ""}, {"id": "credit5", "type": "string", "label": "Crédit de la carte 5 (vide = aucun)", "default": ""}, {"id": "credit6", "type": "string", "label": "Crédit de la carte 6 (vide = aucun)", "default": ""}, {"id": "credit7", "type": "string", "label": "Crédit de la carte 7 (vide = aucun)", "default": ""}, {"id": "centre_y", "type": "number", "label": "Centre de l’orbite (y, px)", "default": 990, "min": 700, "max": 1300, "step": 10, "unit": "px"}]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #000;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Inter", sans-serif;
+      }
+      #plaque,
+      #detoure {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 1920px;
+        object-fit: fill;
+      }
+      #plaque {
+        z-index: 1;
+      }
+      #detoure {
+        z-index: 50;
+      }
+      .orbite {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 1920px;
+        pointer-events: none;
+      }
+      #orbite-arriere {
+        z-index: 5;
+      }
+      #orbite-avant {
+        z-index: 55;
+      }
+      .carte {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 240px;
+        height: 330px;
+        opacity: 0;
+        will-change: transform, opacity;
+      }
+      .cadre {
+        position: absolute;
+        inset: 0;
+        border-radius: 18px;
+        overflow: hidden;
+        border: 2px solid rgba(255, 255, 255, 0.88);
+        box-shadow:
+          0 22px 46px rgba(0, 0, 0, 0.42),
+          0 4px 12px rgba(0, 0, 0, 0.3);
+        background: #17161a;
+      }
+      .cadre video {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .degrade {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 34%;
+        background: linear-gradient(180deg, rgba(10, 9, 12, 0) 0%, rgba(10, 9, 12, 0.78) 100%);
+      }
+      .credit {
+        position: absolute;
+        left: 14px;
+        right: 10px;
+        bottom: 11px;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: #c4c2c8;
+        white-space: nowrap;
+      }
+      .voile {
+        position: absolute;
+        inset: 0;
+        background: #0b0a0d;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2.5" data-width="1080" data-height="1920">
+      <video id="plaque" class="clip" src="assets/media/clip.mp4" data-start="0" data-duration="2.5" data-track-index="0" muted playsinline></video>
+
+      <!-- Demi-ellipse arrière (passe derrière Ninon) -->
+      <svg id="orbite-arriere" class="orbite" viewBox="0 0 1080 1920" data-layout-allow-overflow>
+        <path id="trait-arriere" d="" fill="none" stroke="rgba(255,255,255,0.34)" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round" />
+      </svg>
+
+      <div id="carte1" class="carte"><div class="cadre"><video id="v1" class="clip" src="assets/media/carte1.mp4" data-start="0" data-duration="2.5" data-track-index="3" muted playsinline></video><div class="degrade"></div><div class="credit" data-layout-ignore data-var-text="credit1"></div><div class="voile"></div></div></div>
+      <div id="carte2" class="carte"><div class="cadre"><video id="v2" class="clip" src="assets/media/carte2.mp4" data-start="0" data-duration="2.5" data-track-index="4" muted playsinline></video><div class="degrade"></div><div class="credit" data-layout-ignore data-var-text="credit2"></div><div class="voile"></div></div></div>
+      <div id="carte3" class="carte"><div class="cadre"><video id="v3" class="clip" src="assets/media/carte3.mp4" data-start="0" data-duration="2.5" data-track-index="5" muted playsinline></video><div class="degrade"></div><div class="credit" data-layout-ignore data-var-text="credit3"></div><div class="voile"></div></div></div>
+      <div id="carte4" class="carte"><div class="cadre"><video id="v4" class="clip" src="assets/media/carte4.mp4" data-start="0" data-duration="2.5" data-track-index="6" muted playsinline></video><div class="degrade"></div><div class="credit" data-layout-ignore data-var-text="credit4"></div><div class="voile"></div></div></div>
+      <div id="carte5" class="carte"><div class="cadre"><video id="v5" class="clip" src="assets/media/carte5.mp4" data-start="0" data-duration="2.5" data-track-index="7" muted playsinline></video><div class="degrade"></div><div class="credit" data-layout-ignore data-var-text="credit5"></div><div class="voile"></div></div></div>
+      <div id="carte6" class="carte"><div class="cadre"><video id="v6" class="clip" src="assets/media/carte6.mp4" data-start="0" data-duration="2.5" data-track-index="8" muted playsinline></video><div class="degrade"></div><div class="credit" data-layout-ignore data-var-text="credit6"></div><div class="voile"></div></div></div>
+      <div id="carte7" class="carte"><div class="cadre"><video id="v7" class="clip" src="assets/media/carte7.mp4" data-start="0" data-duration="2.5" data-track-index="9" muted playsinline></video><div class="degrade"></div><div class="credit" data-layout-ignore data-var-text="credit7"></div><div class="voile"></div></div></div>
+
+      <video id="detoure" class="clip" data-layout-allow-occlusion src="assets/media/detoure.webm" data-start="0" data-duration="2.5" data-track-index="1" muted playsinline></video>
+
+      <!-- Demi-ellipse avant (passe devant Ninon) -->
+      <svg id="orbite-avant" class="orbite" viewBox="0 0 1080 1920" data-layout-allow-overflow>
+        <path id="trait-avant" d="" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2.5" stroke-dasharray="2 9" stroke-linecap="round" />
+      </svg>
+    </div>
+    <script>
+      (function () {
+        // Géométrie de l'orbite (px, degrés)
+        const DUREE = parseFloat(document.querySelector("[data-composition-id]").dataset.duration);
+        const hf = window.__hyperframes;
+        const VARS = (hf && hf.getVariables && hf.getVariables()) || {};
+        const cy = Number(VARS.centre_y);
+        const CX = 540, CY = Number.isFinite(cy) ? cy : 990; // centre : poitrine
+        const RX = 505, RY = 270;      // ellipse vue de biais
+        const TILT = 6 * Math.PI / 180; // inclinaison : gauche plus haute
+        const SWEEP = 120;              // degrés parcourus sur DUREE
+        const DUR = DUREE;
+        const N = 7;
+        const W = 240, H = 330;
+        const DEG = Math.PI / 180;
+        const cartes = [];
+        for (let i = 1; i <= N; i++) {
+          const el = document.getElementById("carte" + i);
+          // Crédit vide : pas de ligne ni de dégradé sous la carte.
+          const credit = String(VARS["credit" + i] ?? "").trim();
+          if (!credit) {
+            el.querySelector(".credit").style.display = "none";
+            el.querySelector(".degrade").style.display = "none";
+          }
+          cartes.push({ el, voile: el.querySelector(".voile") });
+        }
+        const sinT = Math.sin(TILT), cosT = Math.cos(TILT);
+        function point(a, k) {
+          const x = Math.cos(a) * RX * k, y = Math.sin(a) * RY * k;
+          return [CX + x * cosT - y * sinT, CY + x * sinT + y * cosT];
+        }
+        // Tracés des deux demi-ellipses (fixes)
+        function arc(a0, a1) {
+          let d = "";
+          for (let s = 0; s <= 60; s++) {
+            const a = a0 + (a1 - a0) * s / 60;
+            const p = point(a, 1);
+            d += (s ? " L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1);
+          }
+          return d;
+        }
+        document.getElementById("trait-avant").setAttribute("d", arc(0, Math.PI));
+        document.getElementById("trait-arriere").setAttribute("d", arc(Math.PI, 2 * Math.PI));
+
+        const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+        const easeOut = (u) => 1 - Math.pow(1 - u, 3);
+        const smooth = (e0, e1, v) => { const u = clamp((v - e0) / (e1 - e0), 0, 1); return u * u * (3 - 2 * u); };
+
+        function poser(t) {
+          const u = clamp((t - 0.05) / 0.35, 0, 1);   // éventail 0,05 → 0,4 s
+          const k = easeOut(u);                         // rayon 0 → 1
+          const apparition = clamp((t - 0.05) / 0.1, 0, 1);
+          for (let i = 0; i < N; i++) {
+            // angle : base régulière, rotation constante (+ tourbillon pendant l'éventail)
+            const aDeg = 112 + i * (360 / N) - SWEEP * (t / DUR) - (1 - k) * 70;
+            const a = aDeg * DEG;
+            const s = Math.sin(a);
+            const d = (s + 1) / 2;                       // 0 = loin, 1 = près
+            const [px, py] = point(a, k);
+            const echelle = (0.64 + 0.42 * d) * (0.35 + 0.65 * k);
+            const bord = smooth(0.0, 0.22, Math.abs(s)); // passage sur les côtés
+            const c = cartes[i];
+            gsap.set(c.el, {
+              x: px - W / 2,
+              y: py - H / 2,
+              scale: echelle,
+              rotation: 8 * Math.cos(a) * 0.6 + TILT / DEG * 0.5,
+              rotationY: -Math.cos(a) * 28,
+              transformPerspective: 900,
+              transformOrigin: "50% 50%",
+              opacity: apparition * (0.55 + 0.45 * bord),
+              zIndex: s > 0 ? 60 + Math.round(d * 20) : 10 + Math.round(d * 20),
+            });
+            gsap.set(c.voile, { opacity: 0.42 * (1 - d) });
+          }
+        }
+
+        const proxy = { t: 0 };
+        const tl = gsap.timeline({ paused: true });
+        tl.fromTo(proxy, { t: 0 }, { t: DUR, duration: DUR, ease: "none", onUpdate: () => poser(proxy.t), immediateRender: true }, 0);
+        tl.fromTo("#orbite-arriere, #orbite-avant", { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, 0.1);
+        poser(0);
+        window.__timelines = window.__timelines || {};
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "nom": "verre",
+  "titre": "Widgets en verre",
+  "description": "Widgets en verre dépoli autour du visage : grand chiffre et sa légende, anneau qui se remplit, barre de minutes, carte de rendu, pastille de marque en bas. Le verre est une copie très floue du clip, calée sur l'image nette.",
+  "besoins": ["clip", "flou"],
+  "duree": 2.5,
+  "variables": {
+    "chiffre": 65,
+    "chiffre_entete": "Pub",
+    "chiffre_legende": "logiciels de pub supprimés",
+    "anneau_titre": "1080p",
+    "anneau_valeur": 100,
+    "minutes": 6,
+    "minutes_max": 60,
+    "minutes_unite": "min",
+    "minutes_entete": "Sur 60 minutes",
+    "minutes_legende": "de pub par heure · Prime",
+    "rendu_entete": "Export",
+    "rendu_titre": "Rendu",
+    "rendu_specs": "1080×1920 · 30 i/s",
+    "pastille_texte": "monté par",
+    "pastille_marque": "ninon.ia"
+  },
+  "conseils": "Visage centré, au moins 40 % de la largeur : les widgets du haut sont à droite (x 750–1050, y 230–800), ceux du bas sous le menton (y 1100–1500). Éviter les clips où les mains passent devant la bouche ou montent à droite du visage. chiffre, minutes, minutes_max et anneau_valeur sont des nombres (sans guillemets) ; un chiffre de 4 caractères au plus reste grand. Légendes courtes : 30 caractères pour chiffre_legende (2 lignes), 34 pour minutes_legende, 18 pour rendu_specs ; au-delà le texte rétrécit. Garder minutes_entete cohérent avec minutes_max (« Sur 60 minutes » ↔ 60). Lisible sur décor clair ou sombre."
+}

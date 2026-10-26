@@ -1,0 +1,307 @@
+<!doctype html>
+<!--
+  « néon » — effet de la bibliothèque (vient de V5, reel démo studio, 26/10/2026)
+  1080×1920, 30 i/s, durée = data-duration de la racine (2,5 s par défaut), muet.
+  Profondeur : mur sombre (prolonge le haut du cadre) → plaque assets/media/clip.mp4 → voile sombre → lueur orange
+  → enseigne néon (variable « mot », taille ajustée pour tenir dans 940 px) + petite ligne mono (« signature »)
+  → détourage assets/media/detoure.webm (alpha, mêmes taille/position/temps que la plaque).
+  Recadrage : plaque ET détourage descendus ensemble de « decalage » px (390 par défaut) pour que le haut de la tête
+  passe devant le bas du mot ; le haut libéré est un mur sombre.
+  Allumage 0,05–0,4 s par paliers fixes (deux tubes : début / fin du mot), puis bourdonnement ±8 % de la lueur jusqu'à DUREE.
+-->
+<html lang="fr" data-resolution="portrait" data-composition-variables='[{"id": "mot", "type": "string", "label": "Mot en néon (4 à 14 caractères)", "default": "rébellion", "maxLength": 14}, {"id": "signature", "type": "string", "label": "Petite ligne mono sous le néon", "default": "ninon.ia"}, {"id": "decalage", "type": "number", "label": "Décalage vers le bas du clip et du détourage (px)", "default": 390, "min": 0, "max": 800, "step": 10, "unit": "px"}]'>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Caveat";
+        src: url("assets/fonts/Caveat-latin.woff2") format("woff2");
+        font-weight: 400 700;
+        font-display: block;
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: "Caveat";
+        src: url("assets/fonts/Caveat-latin-ext.woff2") format("woff2");
+        font-weight: 400 700;
+        font-display: block;
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: "IBM Plex Mono Local";
+        src: url("assets/fonts/IBMPlexMono-400-latin.woff2") format("woff2");
+        font-weight: 400;
+        font-display: block;
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: "IBM Plex Mono Local";
+        src: url("assets/fonts/IBMPlexMono-400-latin-ext.woff2") format("woff2");
+        font-weight: 400;
+        font-display: block;
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #0b0406;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0b0406;
+        --accent: #c2410c;
+        --accent-vif: #e0662f;
+        --accent-clair: #f08a4b;
+      }
+      #monde {
+        position: absolute;
+        inset: 0;
+        transform-origin: 46% 40%;
+      }
+      /* Mur : prolonge vers le haut la poutre sombre du plan */
+      #mur {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 520px;
+        z-index: 0;
+        background: linear-gradient(180deg, #090305 0%, #0d0407 60%, #0e0406 100%);
+      }
+      #plaque,
+      #detoure {
+        position: absolute;
+        left: 0;
+        top: 390px;
+        width: 1080px;
+        height: 1920px;
+        object-fit: fill;
+      }
+      #plaque {
+        z-index: 1;
+        -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0) 0px, #000 90px);
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0) 0px, #000 90px);
+      }
+      #voile {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        background: rgba(9, 4, 8, 0.46);
+      }
+      #lueur {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        mix-blend-mode: screen;
+        opacity: 0;
+      }
+      #lueur .tache {
+        position: absolute;
+        left: 50%;
+        top: 470px;
+        width: 1500px;
+        height: 760px;
+        margin-left: -750px;
+        margin-top: -380px;
+        border-radius: 50%;
+        background: radial-gradient(
+          closest-side,
+          rgba(224, 102, 47, 0.42) 0%,
+          rgba(194, 65, 12, 0.22) 45%,
+          rgba(194, 65, 12, 0.07) 75%,
+          rgba(194, 65, 12, 0) 100%
+        );
+      }
+      #enseigne {
+        position: absolute;
+        inset: 0;
+        z-index: 4;
+      }
+      .mot {
+        position: absolute;
+        left: 0;
+        top: 300px;
+        width: 1080px;
+        text-align: center;
+        font-family: "Caveat", cursive;
+        font-weight: 700;
+        font-size: 330px;
+        line-height: 1;
+        letter-spacing: -0.005em;
+        white-space: nowrap;
+      }
+      /* Tube éteint : verre sombre visible avant l'allumage */
+      #mot-eteint {
+        color: rgba(120, 52, 30, 0.5);
+        -webkit-text-stroke: 2px rgba(170, 80, 45, 0.35);
+      }
+      /* Halo large (bourdonne) */
+      #mot-halo {
+        color: transparent;
+        text-shadow:
+          0 0 18px rgba(240, 138, 75, 0.95),
+          0 0 42px rgba(224, 102, 47, 0.9),
+          0 0 90px rgba(194, 65, 12, 0.85),
+          0 0 160px rgba(194, 65, 12, 0.6);
+      }
+      /* Tube allumé : cœur chaud + bord orange */
+      #mot-coeur {
+        color: #fff0e2;
+        -webkit-text-stroke: 3px rgba(240, 138, 75, 0.9);
+        text-shadow:
+          0 0 3px #fff4ea,
+          0 0 9px rgba(240, 138, 75, 0.95),
+          0 0 20px rgba(224, 102, 47, 0.8);
+      }
+      .gA,
+      .gB {
+        opacity: 0;
+      }
+      #signature {
+        position: absolute;
+        white-space: nowrap;
+        right: 50px;
+        top: 664px;
+        font-family: "IBM Plex Mono Local", "IBM Plex Mono", monospace;
+        font-weight: 400;
+        font-size: 38px;
+        letter-spacing: 0.14em;
+        color: #ffe6d4;
+        opacity: 0;
+        text-shadow:
+          0 0 3px rgba(255, 240, 228, 0.9),
+          0 0 10px rgba(240, 138, 75, 0.95),
+          0 0 26px rgba(224, 102, 47, 0.8),
+          0 0 54px rgba(194, 65, 12, 0.6);
+      }
+      #detoure {
+        z-index: 10;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2.5" data-width="1080" data-height="1920">
+      <div id="monde">
+        <div id="mur"></div>
+        <video id="plaque" class="clip" src="assets/media/clip.mp4" data-start="0" data-duration="2.5" data-track-index="0" muted playsinline></video>
+        <div id="voile"></div>
+        <div id="lueur"><div class="tache"></div></div>
+        <div id="enseigne" data-layout-allow-overlap data-layout-allow-overflow>
+          <div id="mot-eteint" class="mot" data-layout-ignore data-var-text="mot">rébellion</div>
+          <div id="mot-halo" class="mot" data-layout-ignore><span class="gA">rébel</span><span class="gB">lion</span></div>
+          <div id="mot-coeur" class="mot"><span class="gA">rébel</span><span class="gB">lion</span></div>
+          <div id="signature" data-var-text="signature">ninon.ia</div>
+        </div>
+        <video id="detoure" class="clip" data-layout-allow-occlusion src="assets/media/detoure.webm" data-start="0" data-duration="2.5" data-track-index="1" muted playsinline></video>
+      </div>
+    </div>
+    <script>
+      (function () {
+        const DUREE = parseFloat(document.querySelector("[data-composition-id]").dataset.duration);
+        const tl = gsap.timeline({ paused: true });
+
+        // --- Variables : mot (deux tubes), décalage vertical du clip
+        const hf = window.__hyperframes;
+        const V = (hf && hf.getVariables && hf.getVariables()) || {};
+        const MOT = typeof V.mot === "string" && V.mot.trim() ? V.mot.trim() : "rébellion";
+        const lettres = Array.from(MOT);
+        const coupe = Math.max(1, Math.min(lettres.length - 1, Math.round(lettres.length * 0.56)));
+        const tubeA = lettres.slice(0, coupe).join("");
+        const tubeB = lettres.slice(coupe).join("");
+        document.getElementById("mot-eteint").textContent = MOT;
+        document.querySelectorAll(".gA").forEach((el) => (el.textContent = tubeA));
+        document.querySelectorAll(".gB").forEach((el) => (el.textContent = tubeB));
+
+        const dec = Number(V.decalage);
+        const DECALAGE = Math.min(800, Math.max(0, Number.isFinite(dec) ? dec : 390));
+        document.getElementById("plaque").style.top = DECALAGE + "px";
+        document.getElementById("detoure").style.top = DECALAGE + "px";
+        document.getElementById("mur").style.height = DECALAGE + 130 + "px";
+
+        // --- Taille du néon : 330 px pour la démo, réduite pour tenir dans 940 px ; le bas du mot reste à y 630
+        // (là où passe le haut de la tête). Mesuré à chaque image : déterministe, juste dès que Caveat est chargée.
+        const MOTS = document.querySelectorAll(".mot");
+        const eteint = document.getElementById("mot-eteint");
+        const BASE = 330, LARGEUR = 940, BAS = 630;
+        function ajuster() {
+          eteint.style.width = "auto";
+          eteint.style.fontSize = BASE + "px";
+          const w = eteint.scrollWidth;
+          eteint.style.width = "";
+          const taille = w > LARGEUR ? Math.floor((BASE * LARGEUR) / w) : BASE;
+          MOTS.forEach((el) => {
+            el.style.fontSize = taille + "px";
+            el.style.top = BAS - taille + "px";
+          });
+        }
+        ajuster();
+        if (document.fonts) document.fonts.ready.then(ajuster);
+
+        // Allumage : paliers fixes [temps, tube A, tube B]
+        const A = document.querySelectorAll(".gA");
+        const B = document.querySelectorAll(".gB");
+        const paliers = [
+          [0.0, 0, 0],
+          [0.05, 0.85, 0],
+          [0.08, 0, 0],
+          [0.11, 1, 0.6],
+          [0.14, 0.2, 0],
+          [0.17, 1, 1],
+          [0.21, 1, 0.1],
+          [0.25, 0.35, 1],
+          [0.28, 1, 0.15],
+          [0.32, 1, 1],
+          [0.36, 0.7, 1],
+          [0.39, 1, 1],
+        ];
+        paliers.forEach(([t, a, b]) => {
+          tl.set(A, { opacity: a }, t);
+          tl.set(B, { opacity: b }, t);
+        });
+        function palier(t) {
+          let p = paliers[0];
+          for (const q of paliers) if (q[0] <= t + 1e-6) p = q;
+          return p;
+        }
+        // La petite ligne s'allume juste après
+        [[0.0, 0], [0.22, 0.9], [0.26, 0.1], [0.3, 1], [0.34, 0.5], [0.37, 1]].forEach(([t, o]) => tl.set("#signature", { opacity: o }, t));
+
+        // Bourdonnement (±8 %) + lueur du mur qui suit l'allumage, jusqu'à DUREE — fonction du temps seulement
+        const proxy = { t: 0 };
+        const TAU = Math.PI * 2;
+        function vibrer(t) {
+          const h = 1 + 0.08 * (0.62 * Math.sin(TAU * 9.3 * t) + 0.38 * Math.sin(TAU * 3.1 * t + 1.1));
+          const p = palier(t);
+          const allume = p[1] * 0.55 + p[2] * 0.45;
+          gsap.set("#mot-halo", { opacity: Math.min(1, 0.9 * h) });
+          gsap.set("#lueur", { opacity: allume * Math.min(1, 0.88 * h) });
+        }
+        tl.fromTo(
+          proxy,
+          { t: 0 },
+          { t: DUREE, duration: DUREE, ease: "none", immediateRender: true, onUpdate: () => { ajuster(); vibrer(proxy.t); } },
+          0
+        );
+
+        // Lente poussée de caméra sur tout le décor (plaque, néon et détourage bougent ensemble), étalée sur DUREE
+        tl.fromTo("#monde", { scale: 1 }, { scale: 1.04, duration: DUREE, ease: "sine.inOut" }, 0);
+
+        tl.set({}, {}, DUREE);
+        window.__timelines = window.__timelines || {};
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

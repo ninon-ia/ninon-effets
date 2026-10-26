@@ -1,0 +1,106 @@
+<!doctype html>
+<!--
+  Effet « checklist » (bibliothèque effets/, d'après E6 du reel démo studio, 26/10/2026)
+  1080×1920, 30 i/s, durée DUREE (défaut 2,5 s, réécrite par outils/rendre-effet.sh), muet.
+  Le clip (assets/media/clip.mp4) en plein cadre ; sous le visage, la scène compositions/checklist.html :
+  « /monter · ton clip », 2 à 5 étapes qui se cochent une à une sur les premiers 75 % de DUREE.
+  Tous les textes sont des variables déclarées ici ; le script relaie leurs valeurs à l'hôte de la scène
+  (data-variable-values) avant son montage.
+  Charte : split-motion (Inter Display, surfaces #212023), accent de marque #c2410c, signature « ninon.ia ».
+-->
+<html
+  lang="fr"
+  data-resolution="portrait"
+  data-composition-variables='[{"id": "signature", "type": "string", "label": "Signature (en haut à gauche)", "default": "ninon.ia"}, {"id": "etat_cours", "type": "string", "label": "État pendant les étapes", "default": "montage en cours"}, {"id": "etat_fini", "type": "string", "label": "État à la fin", "default": "terminé ✓"}, {"id": "commande", "type": "string", "label": "Titre : commande (orange, vide = aucune)", "default": "/monter"}, {"id": "titre", "type": "string", "label": "Titre : suite", "default": "ton clip"}, {"id": "etape1", "type": "string", "label": "Étape 1", "default": "Transcription mot à mot"}, {"id": "detail1", "type": "string", "label": "Détail 1", "default": "Scribe"}, {"id": "etape2", "type": "string", "label": "Étape 2", "default": "Coupes calées sur les mots"}, {"id": "detail2", "type": "string", "label": "Détail 2", "default": "±30 ms"}, {"id": "etape3", "type": "string", "label": "Étape 3 (vide = étape masquée)", "default": "Briques graphiques posées"}, {"id": "detail3", "type": "string", "label": "Détail 3", "default": "HyperFrames"}, {"id": "etape4", "type": "string", "label": "Étape 4 (vide = étape masquée)", "default": "Musique et bruitages mixés"}, {"id": "detail4", "type": "string", "label": "Détail 4", "default": "−14 LUFS"}, {"id": "etape5", "type": "string", "label": "Étape 5 (vide = étape masquée)", "default": "Rendu vertical"}, {"id": "detail5", "type": "string", "label": "Détail 5", "default": "1080×1920"}]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #000;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      #clip {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 1920px;
+        object-fit: cover;
+        z-index: 1;
+      }
+      /* Assombrit le bas du cadre pour que le panneau se détache, le visage reste intact. */
+      #voile {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        background: linear-gradient(
+          180deg,
+          rgba(0, 0, 0, 0) 0%,
+          rgba(0, 0, 0, 0) 42%,
+          rgba(10, 9, 11, 0.45) 56%,
+          rgba(10, 9, 11, 0.7) 100%
+        );
+      }
+      #checklist {
+        z-index: 3;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2.5" data-width="1080" data-height="1920">
+      <video
+        id="clip"
+        class="clip"
+        src="assets/media/clip.mp4"
+        data-start="0"
+        data-duration="2.5"
+        data-track-index="0"
+        muted
+        playsinline
+      ></video>
+      <div id="voile" class="clip" data-start="0" data-duration="2.5" data-track-index="1"></div>
+      <div
+        id="checklist"
+        class="clip"
+        data-composition-id="checklist"
+        data-composition-src="compositions/checklist.html"
+        data-start="0"
+        data-duration="2.5"
+        data-track-index="2"
+        data-track-kind="graphics"
+        data-width="1080"
+        data-height="1920"
+      ></div>
+    </div>
+    <script>
+      (function () {
+        const racine = document.querySelector("[data-composition-id]");
+        const DUREE = parseFloat(racine.dataset.duration);
+        // Les textes vivent ici : on les relaie à la scène checklist avant qu'elle soit montée.
+        const hf = window.__hyperframes;
+        const vars = (hf && hf.getVariables && hf.getVariables()) || {};
+        document.getElementById("checklist").setAttribute("data-variable-values", JSON.stringify(vars));
+        const tl = gsap.timeline({ paused: true });
+        tl.set({}, {}, DUREE);
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

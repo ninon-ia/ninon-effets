@@ -1,0 +1,23 @@
+{
+  "nom": "rendu",
+  "titre": "Fenêtre de rendu",
+  "description": "Écran partagé : en haut une fenêtre de montage « ninon.ia — rendu » (4 pistes, tête de lecture) et une barre de rendu qui monte jusqu'à 100 % puis « prêt ✓ » ; en bas le clip dans une carte arrondie fondue au noir.",
+  "besoins": ["clip", "vignettes"],
+  "duree": 2.5,
+  "variables": {
+    "marque": "ninon.ia",
+    "titre": "— rendu",
+    "piste1": "vidéo",
+    "piste2": "briques",
+    "piste3": "titres",
+    "piste4": "musique",
+    "quoi": "Rendu",
+    "fichier": "final.mp4",
+    "format": "1080×1920 · 30 i/s",
+    "depart": 41,
+    "images": 795,
+    "pret": "prêt ✓",
+    "apercu": "● aperçu 9:16"
+  },
+  "conseils": "Le clip n'occupe qu'une carte 940×640 en bas (y 1000–1640) : visage dans le tiers haut du clip source, de face. Les vignettes de la piste vidéo sont tirées du clip (début, milieu, fin). depart = pourcentage où la barre commence (0 à 95) ; images = nombre total d'images du compteur et du timecode (durée de la vidéo × 30). Noms de piste de 8 caractères au plus ; fichier + libellé courts (25 caractères ensemble) ; mot final court (« prêt ✓ », « exporté ✓ »)."
+}

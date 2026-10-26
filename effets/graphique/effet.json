@@ -1,0 +1,17 @@
+{
+  "nom": "graphique",
+  "titre": "Graphique en barres",
+  "description": "Écran partagé : en haut un tableau papier avec un graphique en barres animé (la plus haute en orange, ligne de moyenne calculée, compteurs), un titre avec un mot en italique souligné à la main et une signature ; en bas le visage dans une carte arrondie.",
+  "besoins": ["clip"],
+  "duree": 2.5,
+  "variables": {
+    "kicker": "briques graphiques · par style",
+    "marque": "ninon.ia",
+    "titre": "Mes styles,",
+    "titre_italique": "en briques",
+    "donnees": "[{\"label\":\"max-fisher\",\"valeur\":18},{\"label\":\"calque\",\"valeur\":15},{\"label\":\"split-motion\",\"valeur\":7},{\"label\":\"enquete-courte\",\"valeur\":6},{\"label\":\"ninon-split\",\"valeur\":1}]",
+    "moyenne_prefixe": "moy.",
+    "signature": "par Ninon"
+  },
+  "conseils": "donnees est un texte JSON : une liste de 2 à 7 objets {\"label\": \"…\", \"valeur\": nombre}, affichés dans l'ordre donné (les trier du plus grand au plus petit pour un classement). La plus grande valeur passe en orange ; la moyenne (« moy. X,Y ») se calcule toute seule. Valeurs décimales acceptées (virgule à l'affichage). Labels de 16 caractères au plus pour garder la taille. Titre + italique : 25 caractères au plus, sinon il rétrécit. Le visage doit être dans le haut du clip (front vers 10 % de la hauteur, yeux vers 30 %) : la carte du bas montre la source de 11 % à 64 % de sa hauteur. Les chiffres viennent d'une source vérifiée."
+}

@@ -1,0 +1,18 @@
+{
+  "nom": "orbite",
+  "titre": "Orbite de cartes",
+  "description": "Sept cartes vidéo tournent en orbite autour de la personne, devant et derrière elle (détourage), sur une ellipse inclinée tracée en pointillés.",
+  "besoins": ["clip", "detoure", "cartes"],
+  "duree": 2.5,
+  "variables": {
+    "credit1": "",
+    "credit2": "",
+    "credit3": "",
+    "credit4": "",
+    "credit5": "",
+    "credit6": "",
+    "credit7": "",
+    "centre_y": 990
+  },
+  "conseils": "Personne de face, buste visible, fond pas trop chargé (le détourage doit être propre). Cartes : --cartes <dossier> avec 1 à 7 images ou courtes vidéos, prises par ordre alphabétique (préfixer 1_, 2_… pour choisir l'ordre ; moins de 7 = elles se répètent). Sans --cartes, les cartes sont des images du clip lui-même. Crédits : credit1…credit7 dans le fichier --variables, dans l'ordre des cartes (« YouTube · chaîne », « Instagram · @compte ») ; vide = pas de ligne de crédit, à laisser vide seulement pour des images à Ninon. centre_y : hauteur du centre de l'orbite en px (990 = poitrine quand les yeux sont vers y 450–700 ; monter vers 900 si le visage est haut dans le cadre, descendre vers 1080 s'il est bas)."
+}
