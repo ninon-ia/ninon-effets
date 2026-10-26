@@ -21,7 +21,7 @@ Chaque effet dure de 2 à 8 s, en 1080×1920, et tous les textes se changent.
 2. Copie le skill dans ton dossier de skills :
 
 ```bash
-git clone https://github.com/<ton-compte>/ninon-effets ~/.claude/skills/effets
+git clone https://github.com/ninon-ia/ninon-effets ~/.claude/skills/effets
 ```
 
 ## Utiliser
